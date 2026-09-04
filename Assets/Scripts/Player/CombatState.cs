@@ -1,19 +1,20 @@
+using Unity.VisualScripting;
 using UnityEngine;
 
-public class StandingState : State
+public class CombatState : State
 {
     float gravityValue;
-    bool jump;
-    bool crouch;
-    Vector3 currentVelocity;
+    Vector3 currentVelociy;
     bool grounded;
-    bool sprint;
+    bool sheathWeapon;
     float playerSpeed;
-    bool drawWeapon;
+    bool attack;
+    bool roll;
 
     Vector3 cVelocity;
+    Vector3 currentVelocity;
 
-    public StandingState(PlayerController _character, StateMachine _stateMachine) : base(_character, _stateMachine)
+    public CombatState(PlayerController _character, StateMachine _stateMachine) : base(_character, _stateMachine)
     {
         character = _character;
         stateMachine = _stateMachine;
@@ -23,39 +24,37 @@ public class StandingState : State
     {
         base.Enter();
 
-        jump = false;
-        crouch = false;
-        sprint = false;
-        drawWeapon = false;
+        sheathWeapon = false;
         input = Vector2.zero;
-        velocity = Vector3.zero;
-        currentVelocity = Vector3.zero;
+        currentVelociy = Vector3.zero;
         gravityVelocity.y = 0;
 
+        attack = false;
+        roll = false;
+
+        velocity = character.playerVelocity;
         playerSpeed = character.playerSpeed;
         grounded = character.controller.isGrounded;
-        gravityValue = character.gravityValue;
+        gravityValue = character.gravityValue; 
     }
 
     public override void HandleInput()
     {
         base.HandleInput();
 
-        if (jumpAction.triggered)
-        {
-            jump = true;
-        }
-        if (crouchAction.triggered)
-        {
-            crouch = true;
-        }
-        if (sprintAction.triggered)
-        {
-            sprint = true;
-        }
         if (drawWeaponAction.triggered)
         {
-            drawWeapon = true;
+            sheathWeapon = true;
+        }
+
+        if (attackAction.triggered)
+        {
+            attack = true;
+        }
+
+        if (rollAction.triggered)
+        {
+            roll = true;
         }
 
         input = moveAction.ReadValue<Vector2>();
@@ -71,22 +70,19 @@ public class StandingState : State
 
         UpdateSpeedParam(input.magnitude, character.speedDampTime);
 
-        if (sprint)
+        if (sheathWeapon)
         {
-            stateMachine.ChangeState(character.sprinting);
+            character.animator.SetTrigger("sheathWeapon");
+            stateMachine.ChangeState(character.standing);
         }
-        if (jump)
+        if (attack)
         {
-            stateMachine.ChangeState(character.jumping);
+            character.animator.SetTrigger("attack");
+            stateMachine.ChangeState(character.attacking);
         }
-        if (crouch)
+        if (roll)
         {
-            stateMachine.ChangeState(character.crouching);
-        }
-        if (drawWeapon)
-        {
-            stateMachine.ChangeState(character.combatting);
-            character.animator.SetTrigger("drawWeapon");
+            stateMachine.ChangeState(character.rolling);
         }
     }
 

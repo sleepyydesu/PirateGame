@@ -16,7 +16,9 @@ public class State
     public InputAction jumpAction;
     public InputAction crouchAction;
     public InputAction sprintAction;
-
+    public InputAction drawWeaponAction;
+    public InputAction attackAction;
+    public InputAction rollAction;
     protected float currentSpeed;
     protected float speedVelocityRef;
 
@@ -31,6 +33,9 @@ public class State
         jumpAction = character.playerInput.actions["Jump"];
         crouchAction = character.playerInput.actions["Crouch"];
         sprintAction = character.playerInput.actions["Sprint"];
+        drawWeaponAction = character.playerInput.actions["DrawWeapon"];
+        attackAction = character.playerInput.actions["Attack"];
+        rollAction = character.playerInput.actions["Roll"];
     }
 
     public virtual void Enter()
