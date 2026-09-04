@@ -44,6 +44,15 @@ public class PlayerController : MonoBehaviour
 #pragma warning disable UAC1001 // Public field skipped by serialization due to missing [Serializable]
     public SprintJumpState sprintJumping;
 #pragma warning restore UAC1001 // Public field skipped by serialization due to missing [Serializable]
+#pragma warning disable UAC1001 // Public field skipped by serialization due to missing [Serializable]
+    public CombatState combatting;
+#pragma warning restore UAC1001 // Public field skipped by serialization due to missing [Serializable]
+#pragma warning disable UAC1001 // Public field skipped by serialization due to missing [Serializable]
+    public AttackState attacking;
+#pragma warning restore UAC1001 // Public field skipped by serialization due to missing [Serializable]
+#pragma warning disable UAC1001 // Public field skipped by serialization due to missing [Serializable]
+    public RollState rolling;
+#pragma warning restore UAC1001 // Public field skipped by serialization due to missing [Serializable]
 
     [HideInInspector]
     public float gravityValue = -9.81f;
@@ -75,6 +84,9 @@ public class PlayerController : MonoBehaviour
         landing = new LandingState(this, movementSM);
         sprinting = new SprintingState(this, movementSM);
         sprintJumping = new SprintJumpState(this, movementSM);
+        combatting = new CombatState(this, movementSM);
+        attacking = new AttackState(this, movementSM);
+        rolling = new RollState(this, movementSM);
 
         movementSM.Initialize(standing);
 
