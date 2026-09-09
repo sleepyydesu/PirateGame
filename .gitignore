@@ -90,3 +90,7 @@ desktop.ini
 
 # ClickUp / local notes exports that shouldn't be versioned
 *.local.md
+
+ProjectSettings/EditorBuildSettings.asset
+ProjectSettings/ShaderGraphSettings.asset
+*.vsconfig
