@@ -23,6 +23,8 @@ public class StandingState : State
     {
         base.Enter();
 
+        character.SetCombatAnimationLayers(false);
+
         jump = false;
         crouch = false;
         sprint = false;

@@ -31,25 +31,20 @@ public class SprintingState : State
         playerSpeed = character.sprintSpeed;
         grounded = character.controller.isGrounded;
         gravityValue = character.gravityValue;
+
+        character.SetCombatAnimationLayers(true);
     }
 
     public override void HandleInput()
     {
-        base.Enter();
+        base.HandleInput();
         input = moveAction.ReadValue<Vector2>();
         velocity = new Vector3(input.x, 0, input.y);
 
         velocity = velocity.x * character.cameraTransform.right.normalized + velocity.z * character.cameraTransform.forward.normalized;
         velocity.y = 0f;
 
-        if (sprintAction.triggered || input.sqrMagnitude == 0f)
-        {
-            sprint = false;
-        }
-        else
-        {
-            sprint = true;
-        }
+        sprint = sprintAction.ReadValue<float>() > 0f || input.sqrMagnitude > 0f;
 
         if (jumpAction.triggered)
         {

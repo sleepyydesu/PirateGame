@@ -10,6 +10,10 @@ public class CombatState : State
     float playerSpeed;
     bool attack;
     bool roll;
+    bool specialAttack;
+    bool thrustAttack;
+    bool specialAttack2;
+    bool sprint;
 
     Vector3 cVelocity;
     Vector3 currentVelocity;
@@ -24,6 +28,8 @@ public class CombatState : State
     {
         base.Enter();
 
+        character.SetCombatAnimationLayers(true);
+
         sheathWeapon = false;
         input = Vector2.zero;
         currentVelociy = Vector3.zero;
@@ -31,6 +37,10 @@ public class CombatState : State
 
         attack = false;
         roll = false;
+        specialAttack = false;
+        specialAttack2 = false;
+        thrustAttack = false;
+        sprint = false;
 
         velocity = character.playerVelocity;
         playerSpeed = character.playerSpeed;
@@ -57,6 +67,26 @@ public class CombatState : State
             roll = true;
         }
 
+        if (specialAttackAction.triggered)
+        {
+            specialAttack = true;
+        }
+
+        if (specialAttack2Action.triggered)
+        {
+            specialAttack2 = true;
+        }
+
+        if (thrustAction.triggered)
+        {
+            thrustAttack = true;
+        }
+
+        if (sprintAction.triggered)
+        {
+            sprint = true;
+        }
+
         input = moveAction.ReadValue<Vector2>();
         velocity = new Vector3(input.x, 0, input.y);
 
@@ -74,16 +104,46 @@ public class CombatState : State
         {
             character.animator.SetTrigger("sheathWeapon");
             stateMachine.ChangeState(character.standing);
+            return;
         }
+
+        if (specialAttack)
+        {
+            stateMachine.ChangeState(character.specialAttacking);
+            return;
+        }
+
+        if (specialAttack2)
+        {
+            stateMachine.ChangeState(character.specialAttacking2);
+            return;
+        }
+
+        if (thrustAttack)
+        {
+            stateMachine.ChangeState(character.thrustAttacking);
+            return;
+        }
+
         if (attack)
         {
             character.animator.SetTrigger("attack");
             stateMachine.ChangeState(character.attacking);
+            return;
         }
+
         if (roll)
         {
             stateMachine.ChangeState(character.rolling);
+            return;
         }
+
+        if (sprint)
+        {
+            stateMachine.ChangeState(character.sprinting);
+            return;
+        }
+
     }
 
     public override void PhysicsUpdate()

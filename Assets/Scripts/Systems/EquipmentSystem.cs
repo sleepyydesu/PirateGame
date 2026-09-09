@@ -1,32 +1,42 @@
-using System;
 using UnityEngine;
 
 public class EquipmentSystem : MonoBehaviour
 {
     [SerializeField] GameObject weaponHolder;
-    [SerializeField] GameObject weapon;
+    [SerializeField] GameObject weaponPrefab;
     [SerializeField] GameObject weaponSheath;
 
-    GameObject currentWeaponInHand;
-    GameObject currentWeaponInSheath;
+    GameObject weaponInstance;
+    //TrailRenderer swordTrail; // or ParticleSystem, depending what you use
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    void Awake()
     {
-        currentWeaponInSheath = Instantiate(weapon, weaponSheath.transform);
+        weaponInstance = Instantiate(weaponPrefab, weaponHolder.transform, false);
+        //swordTrail = weaponInstance.GetComponentInChildren<TrailRenderer>();
+        //swordTrail.emitting = false; // off by default
+
+        weaponInstance.SetActive(false);
     }
 
-    // Update is called once per frame
     public void DrawWeapon()
     {
-        Debug.Log("DrawWeapon called");
-        currentWeaponInHand = Instantiate(weapon, weaponHolder.transform);
-        Destroy(currentWeaponInSheath);
+        weaponInstance.SetActive(true);
     }
 
     public void SheathWeapon()
     {
-        currentWeaponInSheath = Instantiate(weapon, weaponSheath.transform);
-        Destroy(currentWeaponInHand);
+        weaponInstance.SetActive(false);
     }
+
+    //    // called via Animation Event at swing start
+    //    public void StartTrail()
+    //    {
+    //        swordTrail.emitting = true;
+    //    }
+
+    //    // called via Animation Event at swing end
+    //    public void StopTrail()
+    //    {
+    //        swordTrail.emitting = false;
+    //    }
 }
