@@ -23,36 +23,19 @@ public class PlayerController : MonoBehaviour
     [Range(0, 1)]
     public float airControl = 0.5f;
 
-#pragma warning disable UAC1001 // Public field skipped by serialization due to missing [Serializable]
     public StateMachine movementSM;
-#pragma warning restore UAC1001 // Public field skipped by serialization due to missing [Serializable]
-#pragma warning disable UAC1001 // Public field skipped by serialization due to missing [Serializable]
     public StandingState standing;
-#pragma warning restore UAC1001 // Public field skipped by serialization due to missing [Serializable]
-#pragma warning disable UAC1001 // Public field skipped by serialization due to missing [Serializable]
     public CrouchingState crouching;
-#pragma warning restore UAC1001 // Public field skipped by serialization due to missing [Serializable]
-#pragma warning disable UAC1001 // Public field skipped by serialization due to missing [Serializable]
     public JumpingState jumping;
-#pragma warning restore UAC1001 // Public field skipped by serialization due to missing [Serializable]
-#pragma warning disable UAC1001 // Public field skipped by serialization due to missing [Serializable]
     public LandingState landing;
-#pragma warning restore UAC1001 // Public field skipped by serialization due to missing [Serializable]
-#pragma warning disable UAC1001 // Public field skipped by serialization due to missing [Serializable]
     public SprintingState sprinting;
-#pragma warning restore UAC1001 // Public field skipped by serialization due to missing [Serializable]
-#pragma warning disable UAC1001 // Public field skipped by serialization due to missing [Serializable]
     public SprintJumpState sprintJumping;
-#pragma warning restore UAC1001 // Public field skipped by serialization due to missing [Serializable]
-#pragma warning disable UAC1001 // Public field skipped by serialization due to missing [Serializable]
     public CombatState combatting;
-#pragma warning restore UAC1001 // Public field skipped by serialization due to missing [Serializable]
-#pragma warning disable UAC1001 // Public field skipped by serialization due to missing [Serializable]
     public AttackState attacking;
-#pragma warning restore UAC1001 // Public field skipped by serialization due to missing [Serializable]
-#pragma warning disable UAC1001 // Public field skipped by serialization due to missing [Serializable]
     public RollState rolling;
-#pragma warning restore UAC1001 // Public field skipped by serialization due to missing [Serializable]
+    public TimedAnimState specialAttacking;
+    public TimedAnimState thrustAttacking;
+    public TimedAnimState specialAttacking2;
 
     [HideInInspector]
     public float gravityValue = -9.81f;
@@ -68,6 +51,12 @@ public class PlayerController : MonoBehaviour
     public Animator animator;
     [HideInInspector]
     public Vector3 playerVelocity;
+
+    const int BaseLayerIndex = 0;
+    const int CombatLayerIndex = 1;
+    const int ArmsLayerIndex = 2;
+
+    bool isInCombat = false;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -87,11 +76,24 @@ public class PlayerController : MonoBehaviour
         combatting = new CombatState(this, movementSM);
         attacking = new AttackState(this, movementSM);
         rolling = new RollState(this, movementSM);
+        specialAttacking = new TimedAnimState(this, movementSM, "specialAttack", "specialAttackFinished");
+        thrustAttacking = new TimedAnimState(this, movementSM, "thrustAttack", "thrustAttackFinished", false);
+        specialAttacking2 = new TimedAnimState(this, movementSM, "specialAttack2", "specialAttack2Finished");
 
         movementSM.Initialize(standing);
 
         normalColliderHeight = controller.height;
         gravityValue *= gravityMultiplier;
+
+        // Start with combat layers disabled (player in base state)
+        SetCombatAnimationLayers(false);
+    }
+
+    public void SetCombatAnimationLayers(bool combatActive)
+    {
+        animator.SetLayerWeight(BaseLayerIndex, combatActive ? 0f : 1f);
+        animator.SetLayerWeight(CombatLayerIndex, combatActive ? 1f : 0f);
+        animator.SetLayerWeight(ArmsLayerIndex, combatActive ? 1f : 0f);
     }
 
     // Update is called once per frame
@@ -107,3 +109,4 @@ public class PlayerController : MonoBehaviour
         movementSM.currentState.PhysicsUpdate();
     }
 }
+

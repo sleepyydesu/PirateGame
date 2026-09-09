@@ -19,6 +19,10 @@ public class State
     public InputAction drawWeaponAction;
     public InputAction attackAction;
     public InputAction rollAction;
+    public InputAction specialAttackAction;
+    public InputAction thrustAction;
+    public InputAction specialAttack2Action;
+
     protected float currentSpeed;
     protected float speedVelocityRef;
 
@@ -28,14 +32,37 @@ public class State
         character = _character;
         stateMachine = _stateMachine;
 
-        moveAction = character.playerInput.actions["Move"];
-        lookAction = character.playerInput.actions["Look"];
-        jumpAction = character.playerInput.actions["Jump"];
-        crouchAction = character.playerInput.actions["Crouch"];
-        sprintAction = character.playerInput.actions["Sprint"];
-        drawWeaponAction = character.playerInput.actions["DrawWeapon"];
-        attackAction = character.playerInput.actions["Attack"];
-        rollAction = character.playerInput.actions["Roll"];
+        InputActionMap playerMap = character.playerInput.actions.FindActionMap("Player");
+        moveAction = SafeGetAction(playerMap, "Move");
+        lookAction = SafeGetAction(playerMap, "Look");
+        jumpAction = SafeGetAction(playerMap, "Jump");
+        crouchAction = SafeGetAction(playerMap, "Crouch");
+        sprintAction = SafeGetAction(playerMap, "Sprint");
+        drawWeaponAction = SafeGetAction(playerMap, "DrawWeapon");
+        attackAction = SafeGetAction(playerMap, "Attack");
+        rollAction = SafeGetAction(playerMap, "Roll");
+        specialAttackAction = SafeGetAction(playerMap, "SpecialAttack");
+        thrustAction = SafeGetAction(playerMap, "ThrustAttack");
+        specialAttack2Action = SafeGetAction(playerMap, "SpecialAttack2");
+    }
+
+    private InputAction SafeGetAction(InputActionMap actionsMap, string name)
+    {
+        if (actionsMap == null) { Debug.LogWarning($"Player action map not found on player input asset."); return null; }
+        InputAction foundAction = null;
+        foreach (var action in actionsMap.actions)
+        {
+            if (action.name == name)
+            {
+                foundAction = action;
+                break;
+            }
+        }
+        if (foundAction == null)
+        {
+            Debug.LogWarning($"Input action '{name}' not found on player input asset.");
+        }
+        return foundAction;
     }
 
     public virtual void Enter()

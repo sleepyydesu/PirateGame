@@ -206,7 +206,7 @@ MonoBehaviour:
   speedDampTime: 0.1
   velocityDampTime: 0.15
   rotationDampTime: 0.2
-  airControl: 0.5
+  airControl: 1
   gravityValue: -9.81
   normalColliderHeight: 0
   controller: {fileID: 0}
@@ -214,21 +214,6 @@ MonoBehaviour:
   cameraTransform: {fileID: 0}
   animator: {fileID: 0}
   playerVelocity: {x: 0, y: 0, z: 0}
---- !u!114 &20552987
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 20552978}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c30fa7f2105e37044b70fc9297dd6135, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EquipmentSystem
-  weaponHolder: {fileID: 186429727}
-  weapon: {fileID: 8164078558771037576, guid: 38d3291daaf8d0a4e87e7ebd402f83c5, type: 3}
-  weaponSheath: {fileID: 223964005}
 --- !u!1 &186429727
 GameObject:
   m_ObjectHideFlags: 0
@@ -911,9 +896,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 647827778c0738d4096601e5b60e4329, type: 3}
       insertIndex: -1
       addedObject: {fileID: 20552985}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 647827778c0738d4096601e5b60e4329, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 20552987}
   m_SourcePrefab: {fileID: 100100000, guid: 647827778c0738d4096601e5b60e4329, type: 3}
 --- !u!1 &2124194971
 GameObject:

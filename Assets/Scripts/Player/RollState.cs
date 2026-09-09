@@ -18,6 +18,7 @@ public class RollState : State
 
         timePassed = 0f;
         character.animator.applyRootMotion = true;
+        character.animator.ResetTrigger("rollFinished0");
         character.animator.SetTrigger("roll");
     }
 
@@ -26,13 +27,24 @@ public class RollState : State
         base.LogicUpdate();
 
         timePassed += Time.deltaTime;
-        clipLength = character.animator.GetCurrentAnimatorClipInfo(1)[0].clip.length;
+        if (character.animator.IsInTransition(1))
+        {
+            return;
+        }
+
+        AnimatorClipInfo[] clipInfo = character.animator.GetCurrentAnimatorClipInfo(1);
+        if (clipInfo.Length == 0)
+        {
+            return;
+        }
+
+        clipLength = clipInfo[0].clip.length;
         clipSpeed = character.animator.GetCurrentAnimatorStateInfo(1).speed;
 
-        if (timePassed >= clipLength / clipSpeed)
+        if (clipSpeed > 0f && timePassed >= clipLength / clipSpeed)
         {
             stateMachine.ChangeState(character.combatting);
-            character.animator.SetTrigger("move");
+            character.animator.SetTrigger("rollFinished");
         }
     }
 
