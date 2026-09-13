@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using UnityEngine;
 
 public class StandingState : State
@@ -23,6 +24,7 @@ public class StandingState : State
     {
         base.Enter();
 
+        character.isInCombat = false;
         character.SetCombatAnimationLayers(false);
 
         jump = false;

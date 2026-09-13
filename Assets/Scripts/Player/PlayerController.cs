@@ -56,7 +56,7 @@ public class PlayerController : MonoBehaviour
     const int CombatLayerIndex = 1;
     const int ArmsLayerIndex = 2;
 
-    bool isInCombat = false;
+    public bool isInCombat = false;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()

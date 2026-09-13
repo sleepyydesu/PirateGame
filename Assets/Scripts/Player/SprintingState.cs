@@ -32,7 +32,7 @@ public class SprintingState : State
         grounded = character.controller.isGrounded;
         gravityValue = character.gravityValue;
 
-        character.SetCombatAnimationLayers(true);
+        character.SetCombatAnimationLayers(character.isInCombat);
     }
 
     public override void HandleInput()
@@ -44,7 +44,7 @@ public class SprintingState : State
         velocity = velocity.x * character.cameraTransform.right.normalized + velocity.z * character.cameraTransform.forward.normalized;
         velocity.y = 0f;
 
-        sprint = sprintAction.ReadValue<float>() > 0f || input.sqrMagnitude > 0f;
+        sprint = sprintAction.IsPressed() && input.sqrMagnitude > 0f;
 
         if (jumpAction.triggered)
         {
@@ -53,14 +53,14 @@ public class SprintingState : State
     }
 
     public override void LogicUpdate()
-    { 
+    {
         if (sprint)
         {
             UpdateSpeedParam(input.magnitude + 0.5f, character.speedDampTime);
         }
         else
         {
-            stateMachine.ChangeState(character.standing);
+            stateMachine.ChangeState(character.isInCombat ? character.combatting : character.standing);
         }
 
         if (sprintJump)
