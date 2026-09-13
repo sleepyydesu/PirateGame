@@ -11,11 +11,11 @@ public class EquipmentSystem : MonoBehaviour
 
     void Awake()
     {
-        weaponInstance = Instantiate(weaponPrefab, weaponHolder.transform, false);
+        weaponInstance = Instantiate(weaponPrefab, weaponSheath.transform, false);
         //swordTrail = weaponInstance.GetComponentInChildren<TrailRenderer>();
         //swordTrail.emitting = false; // off by default
 
-        weaponInstance.SetActive(false);
+        weaponInstance.SetActive(true);
     }
 
     public void DrawWeapon()
