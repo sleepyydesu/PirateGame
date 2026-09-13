@@ -14,6 +14,7 @@ public class CombatState : State
     bool thrustAttack;
     bool specialAttack2;
     bool sprint;
+    bool sheathing;
 
     Vector3 cVelocity;
     Vector3 currentVelocity;
@@ -28,9 +29,11 @@ public class CombatState : State
     {
         base.Enter();
 
+        character.isInCombat = true;
         character.SetCombatAnimationLayers(true);
 
         sheathWeapon = false;
+        sheathing = false;
         input = Vector2.zero;
         currentVelociy = Vector3.zero;
         gravityVelocity.y = 0;
@@ -103,7 +106,8 @@ public class CombatState : State
         if (sheathWeapon)
         {
             character.animator.SetTrigger("sheathWeapon");
-            stateMachine.ChangeState(character.standing);
+            sheathing = true;
+            sheathWeapon = false;
             return;
         }
 
@@ -141,6 +145,19 @@ public class CombatState : State
         if (sprint)
         {
             stateMachine.ChangeState(character.sprinting);
+            return;
+        }
+
+        if (sheathing)
+        {
+            AnimatorStateInfo combatLayerState = character.animator.GetCurrentAnimatorStateInfo(1);
+            bool isSheathAnim = combatLayerState.IsName("PlayerSheath1") || combatLayerState.IsName("PlayerSheath2");
+            bool finished = !character.animator.IsInTransition(1) && !isSheathAnim;
+
+            if (finished)
+            {
+                stateMachine.ChangeState(character.standing);
+            }
             return;
         }
 

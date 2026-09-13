@@ -20,12 +20,12 @@ public class EquipmentSystem : MonoBehaviour
 
     public void DrawWeapon()
     {
-        weaponInstance.SetActive(true);
+        weaponInstance.transform.SetParent(weaponHolder.transform, false);
     }
 
     public void SheathWeapon()
     {
-        weaponInstance.SetActive(false);
+         weaponInstance.transform.SetParent(weaponSheath.transform, false);
     }
 
     //    // called via Animation Event at swing start
