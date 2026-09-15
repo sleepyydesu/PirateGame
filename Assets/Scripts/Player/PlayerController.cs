@@ -77,7 +77,7 @@ public class PlayerController : MonoBehaviour
         attacking = new AttackState(this, movementSM);
         rolling = new RollState(this, movementSM);
         specialAttacking = new TimedAnimState(this, movementSM, "specialAttack", "specialAttackFinished");
-        thrustAttacking = new TimedAnimState(this, movementSM, "thrustAttack", "thrustAttackFinished", false);
+        thrustAttacking = new TimedAnimState(this, movementSM, "thrustAttack", "thrustAttackFinished");
         specialAttacking2 = new TimedAnimState(this, movementSM, "specialAttack2", "specialAttack2Finished");
 
         movementSM.Initialize(standing);
