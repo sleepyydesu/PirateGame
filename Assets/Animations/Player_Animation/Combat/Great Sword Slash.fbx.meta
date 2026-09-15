@@ -55,7 +55,35 @@ ModelImporter:
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
       curves: []
-      events: []
+      events:
+      - time: 0
+        functionName: StartSlashVFX
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: c30fa7f2105e37044b70fc9297dd6135, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.9989307
+        functionName: StopSlashVFX
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: c30fa7f2105e37044b70fc9297dd6135, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.17794865
+        functionName: StartDealDamage
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: c30fa7f2105e37044b70fc9297dd6135, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.4978575
+        functionName: EndDealDamage
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: c30fa7f2105e37044b70fc9297dd6135, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
       transformMask: []
       maskType: 3
       maskSource: {instanceID: 0}

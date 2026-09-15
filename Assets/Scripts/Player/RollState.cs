@@ -18,7 +18,7 @@ public class RollState : State
 
         timePassed = 0f;
         character.animator.applyRootMotion = true;
-        character.animator.ResetTrigger("rollFinished0");
+        character.animator.ResetTrigger("rollFinished");
         character.animator.SetTrigger("roll");
     }
 
