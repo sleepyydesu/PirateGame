@@ -22,6 +22,7 @@ public class State
     public InputAction specialAttackAction;
     public InputAction thrustAction;
     public InputAction specialAttack2Action;
+    public InputAction defendAction;
 
     protected float currentSpeed;
     protected float speedVelocityRef;
@@ -44,6 +45,7 @@ public class State
         specialAttackAction = SafeGetAction(playerMap, "SpecialAttack");
         thrustAction = SafeGetAction(playerMap, "ThrustAttack");
         specialAttack2Action = SafeGetAction(playerMap, "SpecialAttack2");
+        defendAction = SafeGetAction(playerMap, "Defense");
     }
 
     private InputAction SafeGetAction(InputActionMap actionsMap, string name)

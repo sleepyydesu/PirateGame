@@ -15,6 +15,7 @@ public class CombatState : State
     bool specialAttack2;
     bool sprint;
     bool sheathing;
+    bool defend;
 
     Vector3 cVelocity;
     Vector3 currentVelocity;
@@ -44,6 +45,7 @@ public class CombatState : State
         specialAttack2 = false;
         thrustAttack = false;
         sprint = false;
+        defend = false;
 
         velocity = character.playerVelocity;
         playerSpeed = character.playerSpeed;
@@ -90,6 +92,11 @@ public class CombatState : State
             sprint = true;
         }
 
+        if (defendAction.triggered)
+        {
+            defend = true;
+        }
+
         input = moveAction.ReadValue<Vector2>();
         velocity = new Vector3(input.x, 0, input.y);
 
@@ -108,6 +115,12 @@ public class CombatState : State
             character.animator.SetTrigger("sheathWeapon");
             sheathing = true;
             sheathWeapon = false;
+            return;
+        }
+
+        if (defend)
+        {
+            stateMachine.ChangeState(character.defending);
             return;
         }
 

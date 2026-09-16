@@ -23,7 +23,7 @@ namespace PirateGame.Enemies
     {
         [Header("Group Attack Settings")]
         [Tooltip("How many enemies are allowed to attack the player at the same time.")]
-        [SerializeField] private int maxSimultaneousAttackers = 2;
+        [SerializeField] private int maxSimultaneousAttackers = 1;
 
         [Tooltip("How far a spotted-player alert travels to other enemies.")]
         [SerializeField] private float alertRadius = 20f;

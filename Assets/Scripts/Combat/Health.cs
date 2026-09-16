@@ -37,6 +37,7 @@ namespace PirateGame.Combat
     {
         [SerializeField] private float maxHealth = 100f;
         [SerializeField] private float currentHealth;
+        public float damageMultiplier = 1f;
 
         public float MaxHealth => maxHealth;
         public float CurrentHealth { get; private set; }
@@ -63,7 +64,8 @@ namespace PirateGame.Combat
         {
             if (IsDead) return;
 
-            CurrentHealth = Mathf.Max(0f, CurrentHealth - info.Amount);
+            float reducedAmount = info.Amount * damageMultiplier;
+            CurrentHealth = Mathf.Max(0f, CurrentHealth - reducedAmount);
             OnDamaged?.Invoke(info);
 
             if (IsDead)
