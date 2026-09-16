@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using PirateGame.Combat;
 
 public class DamageDealer : MonoBehaviour
 {
@@ -9,27 +10,33 @@ public class DamageDealer : MonoBehaviour
     [SerializeField] float weaponLength;
     [SerializeField] float weaponDamage;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         canDealDamage = false;
         hasDealtDamage = new List<GameObject>();
     }
 
-    // Update is called once per frame
     void Update()
     {
-        if(canDealDamage)
+        if (canDealDamage)
         {
             RaycastHit hit;
-
             int layerMask = 1 << 9;
-            if(Physics.Raycast(transform.position, -transform.up, out hit, weaponLength, layerMask))
+
+            if (Physics.Raycast(transform.position, -transform.up, out hit, weaponLength, layerMask))
             {
-                if (!hasDealtDamage.Contains(hit.transform.gameObject))
+                GameObject target = hit.transform.gameObject;
+
+                if (!hasDealtDamage.Contains(target))
                 {
-                    Debug.Log("damage");
-                    hasDealtDamage.Add(hit.transform.gameObject);
+                    hasDealtDamage.Add(target);
+
+                    IDamageable damageable = hit.transform.GetComponentInParent<IDamageable>();
+                    if (damageable != null)
+                    {
+                        DamageInfo info = new DamageInfo(weaponDamage, gameObject, hit.point);
+                        damageable.TakeDamage(info);
+                    }
                 }
             }
         }
@@ -49,6 +56,6 @@ public class DamageDealer : MonoBehaviour
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.yellow;
-        Gizmos.DrawLine(transform.position, transform.position - transform.up * weaponLength);       
+        Gizmos.DrawLine(transform.position, transform.position - transform.up * weaponLength);
     }
 }

@@ -43,15 +43,6 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Look",
-                    "type": "Button",
-                    "id": "298cda2f-cd89-43e1-ab19-7b8b67eab29f",
-                    "expectedControlType": "",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
-                },
-                {
                     "name": "DrawWeapon",
                     "type": "Button",
                     "id": "e9ce9323-10ae-4670-85bb-06c63cb3bff7",
@@ -100,6 +91,15 @@
                     "name": "SpecialAttack2",
                     "type": "Button",
                     "id": "bae88aca-e3f8-4d34-bb3f-a387be372ad8",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Defense",
+                    "type": "Button",
+                    "id": "767f000b-9a1e-4800-b7b6-3a88f52bd001",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -192,17 +192,6 @@
                     "processors": "",
                     "groups": "",
                     "action": "Sprint",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "1428a3df-56d2-46ee-9de4-5f30ef4e2714",
-                    "path": "",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "Look",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -337,6 +326,65 @@
                     "action": "SpecialAttack2",
                     "isComposite": false,
                     "isPartOfComposite": true
+                },
+                {
+                    "name": "",
+                    "id": "3d30d08a-9f6d-41fb-9672-9a076a4599f5",
+                    "path": "<Keyboard>/q",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Defense",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        },
+        {
+            "name": "CameraControls",
+            "id": "8a00f63b-4b93-4ae7-9223-78ec5a6320c0",
+            "actions": [
+                {
+                    "name": "MouseZoom",
+                    "type": "Value",
+                    "id": "3471860c-4f97-4242-aad9-9b38fbbe51da",
+                    "expectedControlType": "Vector2",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
+                },
+                {
+                    "name": "Look",
+                    "type": "Value",
+                    "id": "5eb149ef-4a2a-48b1-b10a-79888b1b28aa",
+                    "expectedControlType": "Vector2",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "314c75b0-0ada-4769-90e5-6cc496da16a1",
+                    "path": "<Mouse>/scroll",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "MouseZoom",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "4e94e2ee-82f9-4fa1-b944-a98bc2af9199",
+                    "path": "<Mouse>/delta",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Look",
+                    "isComposite": false,
+                    "isPartOfComposite": false
                 }
             ]
         }

@@ -36,6 +36,7 @@ public class PlayerController : MonoBehaviour
     public TimedAnimState specialAttacking;
     public TimedAnimState thrustAttacking;
     public TimedAnimState specialAttacking2;
+    public DefenseState defending;
 
     [HideInInspector]
     public float gravityValue = -9.81f;
@@ -79,6 +80,7 @@ public class PlayerController : MonoBehaviour
         specialAttacking = new TimedAnimState(this, movementSM, "specialAttack", "specialAttackFinished");
         thrustAttacking = new TimedAnimState(this, movementSM, "thrustAttack", "thrustAttackFinished");
         specialAttacking2 = new TimedAnimState(this, movementSM, "specialAttack2", "specialAttack2Finished");
+        defending = new DefenseState(this, movementSM);
 
         movementSM.Initialize(standing);
 
