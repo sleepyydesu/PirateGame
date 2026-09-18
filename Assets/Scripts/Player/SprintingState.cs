@@ -9,6 +9,7 @@ public class SprintingState : State
     bool sprint;
     float playerSpeed;
     bool sprintJump;
+    bool roll;
     Vector3 cVelocity;
 
     public SprintingState(PlayerController _character, StateMachine _stateMachine) : base(_character, _stateMachine)
@@ -23,6 +24,8 @@ public class SprintingState : State
 
         sprint = false;
         sprintJump = false;
+        roll = false;
+
         input = Vector2.zero;
         velocity = Vector3.zero;
         gravityVelocity = Vector3.zero;
@@ -50,6 +53,10 @@ public class SprintingState : State
         {
             sprintJump = true;
         }
+        if (rollAction.triggered)
+        {
+            roll = true;
+        }
     }
 
     public override void LogicUpdate()
@@ -66,6 +73,12 @@ public class SprintingState : State
         if (sprintJump)
         {
             stateMachine.ChangeState(character.sprintJumping);
+        }
+        if (roll)
+        {
+            character.rolling.SetReturnState(character.sprinting);
+            stateMachine.ChangeState(character.rolling);
+            return;
         }
     }
 

@@ -25,6 +25,8 @@ public class TimedAnimState : State
     {
         base.Enter();
 
+        character.FaceCameraDirection();
+
         timePassed = 0f;
         if (useRootMotion) character.animator.applyRootMotion = true;
         character.animator.ResetTrigger(exitTrigger);

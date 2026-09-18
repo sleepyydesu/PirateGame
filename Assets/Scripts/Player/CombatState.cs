@@ -15,6 +15,8 @@ public class CombatState : State
     bool specialAttack2;
     bool sprint;
     bool sheathing;
+    bool movingSheath;
+    bool sheathAnimationStarted;
     bool defend;
 
     Vector3 cVelocity;
@@ -35,6 +37,8 @@ public class CombatState : State
 
         sheathWeapon = false;
         sheathing = false;
+        movingSheath = false;
+        sheathAnimationStarted = false;
         input = Vector2.zero;
         currentVelociy = Vector3.zero;
         gravityVelocity.y = 0;
@@ -112,9 +116,28 @@ public class CombatState : State
 
         if (sheathWeapon)
         {
-            character.animator.SetTrigger("sheathWeapon");
+            movingSheath = input.sqrMagnitude > 0.0001f;
+            character.animator.SetTrigger(movingSheath ? "sheathWeaponMoving" : "sheathWeapon");
             sheathing = true;
+            sheathAnimationStarted = false;
             sheathWeapon = false;
+            return;
+        }
+
+        if (sheathing)
+        {
+            // Moving uses the arms-only layer so the combat locomotion blend tree
+            // remains active. Idle sheathing continues to use the full-body layer.
+            int sheathLayer = movingSheath ? 2 : 1;
+            AnimatorStateInfo sheathLayerState = character.animator.GetCurrentAnimatorStateInfo(sheathLayer);
+            bool isSheathAnim = sheathLayerState.IsName("PlayerSheath1") ||
+                                sheathLayerState.IsName("PlayerSheath2");
+
+            if (isSheathAnim)
+                sheathAnimationStarted = true;
+            else if (sheathAnimationStarted && !character.animator.IsInTransition(sheathLayer))
+                stateMachine.ChangeState(character.standing);
+
             return;
         }
 
@@ -157,20 +180,8 @@ public class CombatState : State
 
         if (sprint)
         {
+            character.rolling.SetReturnState(character.combatting);
             stateMachine.ChangeState(character.sprinting);
-            return;
-        }
-
-        if (sheathing)
-        {
-            AnimatorStateInfo combatLayerState = character.animator.GetCurrentAnimatorStateInfo(1);
-            bool isSheathAnim = combatLayerState.IsName("PlayerSheath1") || combatLayerState.IsName("PlayerSheath2");
-            bool finished = !character.animator.IsInTransition(1) && !isSheathAnim;
-
-            if (finished)
-            {
-                stateMachine.ChangeState(character.standing);
-            }
             return;
         }
 

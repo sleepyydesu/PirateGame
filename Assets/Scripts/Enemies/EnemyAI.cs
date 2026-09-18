@@ -102,6 +102,10 @@ namespace PirateGame.Enemies
         [Tooltip("If an enemy holds an attack slot this long without landing a strike, it gives the slot to a crewmate.")]
         [SerializeField] private float maxTokenHoldTime = 3f;
 
+        [Header("Ragdoll")]
+        [SerializeField] private GameObject ragdollPrefab;
+        [SerializeField] private Transform ragdollRootBone; // root bone reference on the RAGDOLL prefab, matching the animated skeleton's hierarchy
+
         [Header("Animation (optional)")]
         [SerializeField] private Animator animator;
         [Tooltip("How many attack clips sit in the Attack state's blend tree (thresholds 0,1,2...). " +
@@ -313,8 +317,10 @@ namespace PirateGame.Enemies
                     SetAgentStopped(true);
                     agent.enabled = false;
                     crew.ReportDisengaged(this);
-                    SetTrigger(DieParam);
                     foreach (var col in GetComponentsInChildren<Collider>()) col.enabled = false;
+                    // Hide the animated mesh renderer(s) immediately since the ragdoll replaces it
+                    foreach (var renderer in GetComponentsInChildren<Renderer>())
+                        renderer.enabled = false;
                     break;
             }
         }
@@ -571,7 +577,8 @@ namespace PirateGame.Enemies
 
                 if (dist <= attackRange * 1.25f && inFront && playerHealth != null)
                 {
-                    playerHealth.TakeDamage(new DamageInfo(attackDamage, gameObject, player.position));
+                    Vector3 approxHitPoint = player.position + Vector3.up * 1.2f; // roughly torso height
+                    playerHealth.TakeDamage(new DamageInfo(attackDamage, gameObject, approxHitPoint));
                 }
             }
         }
@@ -752,8 +759,38 @@ namespace PirateGame.Enemies
         private void HandleDeath()
         {
             EnterState(State.Dead);
-            // Keep the body around for a few seconds, then clean up.
-            Destroy(gameObject, 6f);
+
+            if (ragdollPrefab != null)
+            {
+                GameObject ragdollInstance = Instantiate(ragdollPrefab, transform.position, transform.rotation);
+                // Optional: match the ragdoll bones' current pose to the animated corpse's last pose,
+                // otherwise it'll snap to whatever pose the ragdoll prefab was saved in (usually T-pose or idle).
+
+                MatchRagdollPose(ragdollInstance);
+
+                // Keep the body around for a few seconds, then clean up.
+                Destroy(gameObject);
+                Destroy(ragdollInstance, 6f);
+            }
+        }
+
+        void MatchRagdollPose(GameObject ragdollInstance)
+        {
+            Transform[] animatedBones = GetComponentsInChildren<Transform>();
+            Transform[] ragdollBones = ragdollInstance.GetComponentsInChildren<Transform>();
+
+            foreach (Transform ragdollBone in ragdollBones)
+            {
+                foreach (Transform animatedBone in animatedBones)
+                {
+                    if (animatedBone.name == ragdollBone.name)
+                    {
+                        ragdollBone.position = animatedBone.position;
+                        ragdollBone.rotation = animatedBone.rotation;
+                        break;
+                    }
+                }
+            }
         }
 
         // ================================================================ misc helpers
