@@ -9951,6 +9951,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PirateGame.Combat.Health
   maxHealth: 100
   currentHealth: 0
+  damageMultiplier: 1
 --- !u!114 &1335737605856795643
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9968,7 +9969,7 @@ MonoBehaviour:
   instantDetectRadius: 2.5
   obstacleMask:
     serializedVersion: 2
-    m_Bits: 4294966527
+    m_Bits: 55
   loseSightTime: 4
   walkSpeed: 2
   runSpeed: 6
@@ -9991,6 +9992,8 @@ MonoBehaviour:
   parryStaggerTime: 2
   hitStaggerTime: 0.35
   maxTokenHoldTime: 3
+  ragdollPrefab: {fileID: 0}
+  ragdollRootBone: {fileID: 0}
   animator: {fileID: 1791822162045683348}
   attackVariantCount: 1
   useAnimationEvents: 0

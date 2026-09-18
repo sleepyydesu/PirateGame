@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 
 public class ThirdPersonCameraController : MonoBehaviour
 {
-    [SerializeField] private PlayerInput playerInput; // drag the player's PlayerInput component here
+    [SerializeField] private PlayerInput playerInput;
     [SerializeField] private float zoomSpeed = 2f;
     [SerializeField] private float zoomLerpSpeed = 10f;
     [SerializeField] private float minDistance = 3f;

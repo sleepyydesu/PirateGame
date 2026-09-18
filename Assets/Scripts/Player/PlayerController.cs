@@ -110,5 +110,44 @@ public class PlayerController : MonoBehaviour
     {
         movementSM.currentState.PhysicsUpdate();
     }
+
+    public void FaceCameraDirection()
+    {
+        Vector3 camForward = cameraTransform.forward;
+        camForward.y = 0f;
+
+        if (camForward.sqrMagnitude > 0.001f)
+        {
+            transform.rotation = Quaternion.LookRotation(camForward.normalized);
+        }
+    }
+
+    public void FaceRollDirection(Vector2 moveInput)
+    {
+        Vector3 facing;
+
+        if (moveInput.sqrMagnitude > 0.01f)
+        {
+            // Moving — roll in the camera-relative input direction
+            Vector3 camForward = cameraTransform.forward;
+            Vector3 camRight = cameraTransform.right;
+            camForward.y = 0f;
+            camRight.y = 0f;
+
+            facing = (camForward.normalized * moveInput.y + camRight.normalized * moveInput.x).normalized;
+        }
+        else
+        {
+            // Standing still — roll toward camera-forward
+            facing = cameraTransform.forward;
+            facing.y = 0f;
+            facing = facing.normalized;
+        }
+
+        if (facing.sqrMagnitude > 0.001f)
+        {
+            transform.rotation = Quaternion.LookRotation(facing);
+        }
+    }
 }
 

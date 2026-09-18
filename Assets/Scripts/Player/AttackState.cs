@@ -17,6 +17,8 @@ public class AttackState : State
     {
         base.Enter();
 
+        character.FaceCameraDirection();
+
         attack = false;
         character.animator.applyRootMotion = true;
         timePassed = 0f;
