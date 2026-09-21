@@ -1,0 +1,77 @@
+using UnityEngine;
+
+public class AttackState : State
+{
+    float timePassed;
+    float clipLength;
+    float clipSpeed;
+    bool attack;
+
+    public AttackState(PlayerController _character, StateMachine _stateMachine) : base(_character, _stateMachine)
+    {
+        character = _character;
+        stateMachine = _stateMachine;
+    }
+
+    public override void Enter()
+    {
+        base.Enter();
+
+        character.FaceCameraDirection();
+
+        attack = false;
+        character.animator.applyRootMotion = true;
+        timePassed = 0f;
+        
+        character.animator.ResetTrigger("attackFinished");
+        character.animator.SetTrigger("attack");
+        character.animator.SetFloat("speed", 0f);
+    }
+
+    public override void HandleInput()
+    {
+        base.HandleInput();
+
+        if (attackAction.triggered)
+        {
+            attack = true;
+        }
+    }
+
+    public override void LogicUpdate()
+    {
+        base.LogicUpdate();
+
+        timePassed += Time.deltaTime;
+        if (character.animator.IsInTransition(1))
+        {
+            return;
+        }
+
+        AnimatorClipInfo[] clipInfo = character.animator.GetCurrentAnimatorClipInfo(1);
+        if (clipInfo.Length == 0)
+        {
+            return;
+        }
+
+        clipLength = clipInfo[0].clip.length;
+        clipSpeed = character.animator.GetCurrentAnimatorStateInfo(1).speed;
+
+        if (clipSpeed > 0f && timePassed >= clipLength / clipSpeed && attack)
+        {
+            stateMachine.ChangeState(character.attacking);
+        }
+        if (clipSpeed > 0f && timePassed >= clipLength / clipSpeed)
+        {
+            stateMachine.ChangeState(character.combatting);
+            character.animator.SetTrigger("attackFinished");
+        }
+    }
+
+    public override void Exit()
+    {
+        base.Exit();
+
+        character.animator.applyRootMotion = false;
+    }
+}
