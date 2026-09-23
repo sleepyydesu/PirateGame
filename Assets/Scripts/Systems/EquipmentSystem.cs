@@ -5,6 +5,9 @@ public class EquipmentSystem : MonoBehaviour
 {
     DamageDealer damageDealer;
 
+    /// <summary>The DamageDealer on the spawned sword (used by quest upgrades).</summary>
+    public DamageDealer WeaponDamageDealer => damageDealer;
+
     [SerializeField] GameObject weaponHolder;
     [SerializeField] GameObject weaponPrefab;
     [SerializeField] GameObject weaponSheath;
