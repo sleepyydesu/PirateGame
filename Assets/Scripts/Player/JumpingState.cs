@@ -77,6 +77,7 @@ public class JumpingState : State
 
     void Jump()
     {
-        gravityVelocity.y += Mathf.Sqrt(jumpHeight * - 3.0f * gravityValue);
+        // v = sqrt(2 * h * |g|) — the velocity that reaches exactly jumpHeight.
+        gravityVelocity.y += Mathf.Sqrt(jumpHeight * -2.0f * gravityValue);
     }
 }

@@ -1,7 +1,5 @@
 using UnityEngine;
 using PirateGame.Combat;
-using System;
-using Unity.InferenceEngine;
 
 [RequireComponent(typeof(Health))]
 public class BloodSplatVFX : MonoBehaviour
@@ -38,7 +36,10 @@ public class BloodSplatVFX : MonoBehaviour
             return;
         }
 
-        cameraShake.Shake();
+        if (cameraShake != null)
+        {
+            cameraShake.Shake();
+        }
 
         Vector3 spawnPosition = info.HitPoint != Vector3.zero ? info.HitPoint : transform.position + Vector3.up * 1.2f;
 

@@ -1,7 +1,5 @@
 using UnityEngine;
 using Unity.Cinemachine;
-using System.Runtime.CompilerServices;
-using UnityEngine.Rendering;
 
 public class CameraShake : MonoBehaviour
 {

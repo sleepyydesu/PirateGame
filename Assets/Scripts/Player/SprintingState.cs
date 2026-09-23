@@ -86,7 +86,7 @@ public class SprintingState : State
     {
         base.PhysicsUpdate();
 
-        gravityVelocity.y = gravityValue * Time.deltaTime;
+        gravityVelocity.y += gravityValue * Time.deltaTime;
         grounded = character.controller.isGrounded;
 
         if (grounded && gravityVelocity.y < 0)

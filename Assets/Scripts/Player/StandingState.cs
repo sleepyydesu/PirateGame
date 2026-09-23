@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using UnityEngine;
 
 public class StandingState : State
@@ -85,19 +84,23 @@ public class StandingState : State
         if (sprint)
         {
             stateMachine.ChangeState(character.sprinting);
+            return;
         }
         if (jump)
         {
             stateMachine.ChangeState(character.jumping);
+            return;
         }
         if (crouch)
         {
             stateMachine.ChangeState(character.crouching);
+            return;
         }
         if (drawWeapon)
         {
             stateMachine.ChangeState(character.combatting);
             character.animator.SetTrigger("drawWeapon");
+            return;
         }
         if (roll)
         {

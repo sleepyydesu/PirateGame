@@ -1,6 +1,4 @@
-using System.Data.Common;
 using PirateGame.Combat;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class DefenseState : State

@@ -10,7 +10,6 @@ public class PlayerController : MonoBehaviour
     public float sprintSpeed = 8.0f;
     public float jumpHeight = 1.0f;
     public float gravityMultiplier = 2;
-    public float rotationSpeed = 5f;
     public float crouchColliderHeight = 1.35f;
 
     [Header("Animation Smoothing")]

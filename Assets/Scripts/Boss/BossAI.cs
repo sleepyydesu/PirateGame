@@ -162,7 +162,7 @@ namespace PirateGame.Enemies
             Animator.StringToHash("Speed");
 
         private static readonly int HitParam =
-            Animator.StringToHash("hit");
+            Animator.StringToHash("Hit");
 
         private static readonly int DieParam =
             Animator.StringToHash("Die");
@@ -265,8 +265,6 @@ namespace PirateGame.Enemies
             {
                 FindPlayer();
             }
-
-            attackCooldownTimer -= Time.deltaTime;
 
             switch (CurrentState)
             {
@@ -460,13 +458,6 @@ namespace PirateGame.Enemies
 
             FaceTowards(player.position);
 
-            // FIX:
-            // The old code had:
-            //
-            // dist <= CurrentPhase.attacks.Length > 0 ? ...
-            //
-            // which caused the bool/int '>' error.
-            //
             float attackRange = 2f;
 
             if (CurrentPhase != null &&

@@ -9,6 +9,8 @@ public class DamageDealer : MonoBehaviour
 
     [SerializeField] float weaponLength;
     [SerializeField] float weaponDamage;
+    [Tooltip("Layers the weapon can hit. Defaults to layer 9, matching the previous hardcoded mask.")]
+    [SerializeField] LayerMask hitLayers = 1 << 9;
 
     void Start()
     {
@@ -21,9 +23,8 @@ public class DamageDealer : MonoBehaviour
         if (canDealDamage)
         {
             RaycastHit hit;
-            int layerMask = 1 << 9;
 
-            if (Physics.Raycast(transform.position, -transform.up, out hit, weaponLength, layerMask))
+            if (Physics.Raycast(transform.position, -transform.up, out hit, weaponLength, hitLayers))
             {
                 GameObject target = hit.transform.gameObject;
 

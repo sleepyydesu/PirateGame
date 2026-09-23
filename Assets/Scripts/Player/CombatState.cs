@@ -1,10 +1,8 @@
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class CombatState : State
 {
     float gravityValue;
-    Vector3 currentVelociy;
     bool grounded;
     bool sheathWeapon;
     float playerSpeed;
@@ -40,7 +38,6 @@ public class CombatState : State
         movingSheath = false;
         sheathAnimationStarted = false;
         input = Vector2.zero;
-        currentVelociy = Vector3.zero;
         gravityVelocity.y = 0;
 
         attack = false;

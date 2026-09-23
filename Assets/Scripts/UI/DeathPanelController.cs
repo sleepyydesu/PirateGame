@@ -26,7 +26,9 @@ public class DeathPanelController : MonoBehaviour
 
     IEnumerator ShowDeathPanelAfterDelay()
     {
-        yield return new WaitForSeconds(freezeDelay); // real-time wait, unaffected by timeScale
+        // Real-time wait so the ragdoll settle delay still works even if
+        // timeScale is already 0 when this runs.
+        yield return new WaitForSecondsRealtime(freezeDelay);
 
         deathPanel.SetActive(true);
         Cursor.lockState = CursorLockMode.None;
