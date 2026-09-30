@@ -10,6 +10,9 @@ public class DamageDealer : MonoBehaviour
     [SerializeField] float weaponLength;
     [SerializeField] float weaponDamage;
 
+    [Tooltip("Set at runtime by PlayerUpgrades (quest rewards). 1 = base damage.")]
+    public float damageMultiplier = 1f;
+
     void Start()
     {
         canDealDamage = false;
@@ -34,7 +37,7 @@ public class DamageDealer : MonoBehaviour
                     IDamageable damageable = hit.transform.GetComponentInParent<IDamageable>();
                     if (damageable != null)
                     {
-                        DamageInfo info = new DamageInfo(weaponDamage, gameObject, hit.point);
+                        DamageInfo info = new DamageInfo(weaponDamage * damageMultiplier, gameObject, hit.point);
                         damageable.TakeDamage(info);
                     }
                 }
