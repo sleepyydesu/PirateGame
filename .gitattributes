@@ -1,6 +1,5 @@
 # Auto-detect text files and normalize line endings
 * text=auto eol=lf
-
 # Unity YAML files should be diffed as text but merged carefully by hand
 *.cs text diff=csharp
 *.cginc text
