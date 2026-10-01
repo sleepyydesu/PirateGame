@@ -1,0 +1,38 @@
+Assets/Idyllic Fantasy Nature/Demo/Prefabs/FloatingLeafs_Blue.prefab.meta -> f292a42f9e278da408b97e0a10cc8da8
+Assets/Idyllic Fantasy Nature/Demo/Prefabs/FloatingLeafs_Purple.prefab.meta -> e88e50263d4e00e46823a317be373376
+Assets/Idyllic Fantasy Nature/Demo/Prefabs/FloatingLeafs_Red.prefab.meta -> abe084a06ec72144f8c140261b683ee0
+Assets/Idyllic Fantasy Nature/Materials/Rocks/Cliff.mat.meta -> b0a00d378697b584391c424d0ecf58ac
+Assets/Idyllic Fantasy Nature/Materials/Rocks/Stone_Big_01.mat.meta -> a39f3ba40e70f274882a8800f41a3035
+Assets/Idyllic Fantasy Nature/Materials/Rocks/Stone_Big_02.mat.meta -> b5856b150e06d9c41a9c6e3a6988e7d3
+Assets/Idyllic Fantasy Nature/Materials/Rocks/Stone_Big_03.mat.meta -> ce21bf5bc5bebd94d8ee450716aac08f
+Assets/Idyllic Fantasy Nature/Materials/Rocks/Stone_Medium_01.mat.meta -> f3d708e1dbacd3246b4f953b99d23f0b
+Assets/Idyllic Fantasy Nature/Materials/Rocks/Stone_Medium_02.mat.meta -> 449715d2a0c78564c8c1a1767f305f7e
+Assets/Idyllic Fantasy Nature/Materials/Rocks/Stone_Medium_03.mat.meta -> c54126f734b228244956af3a67a6f8f7
+Assets/Idyllic Fantasy Nature/Prefabs/ButterflySpawnArea.prefab.meta -> a379fd3487a26444dbdc8de46d7bd572
+Assets/Idyllic Fantasy Nature/Prefabs/Cliff_01.prefab.meta -> a86af659c52a1f54c924985f5d11a2b9
+Assets/Idyllic Fantasy Nature/Prefabs/Cliff_02.prefab.meta -> 3165793d3ae6acb48863fa5e0f6d5ccb
+Assets/Idyllic Fantasy Nature/Prefabs/Cliff_03.prefab.meta -> ca00d4d4c0d329e4599915fdd324475f
+Assets/Idyllic Fantasy Nature/Prefabs/Cliff_04.prefab.meta -> 216d48b805269d24b82ee98782f87009
+Assets/Idyllic Fantasy Nature/Prefabs/Cliff_05.prefab.meta -> 7df3af01473dd7841ae339df250b9cd8
+Assets/Idyllic Fantasy Nature/Prefabs/Stone_Big_03.prefab.meta -> 532217a856dbab64ab8d9bdb743876dc
+Assets/Idyllic Fantasy Nature/Prefabs/Stones_03.prefab.meta -> fd48fa88773e85c4eb7a499bc2e4226b
+Assets/JMO Assets/Welcome Screen/CFXR_WelcomeScreen.uss.meta:10:  script: {fileID: 12385, guid: 0000000000000000e000000000000000, type: 0}
+Assets/JMO Assets/Welcome Screen/CFXR_WelcomeScreen.uxml.meta:17:  script: {fileID: 13804, guid: 0000000000000000e000000000000000, type: 0}
+Assets/MergedTerrains/MergedTerrainData 7.asset.meta -> 97705153f2857f445aaba388b190b258
+Assets/Prefabs/Environment/Coconut-tree.prefab.meta -> 52e5900b19facb0488455e854931812a
+Assets/Prefabs/Environment/coconut-tree/source/Coconut_Tree.fbx.meta:11:    second: {fileID: 2100000, guid: 53924826af564234a8c5d23f904f7d12, type: 2}
+Assets/Prefabs/Environment/coconut-tree/source/Coconut_Tree.fbx.meta:16:    second: {fileID: 2100000, guid: acb160c4c6c651643a23e6c5a75d893f, type: 2}
+Assets/Prefabs/Environment/coconut-tree/source/Coconut_tree-Trunk.mat.meta -> 53924826af564234a8c5d23f904f7d12
+Assets/Prefabs/Environment/coconut-tree/source/Cononute_tree-Leafs.mat.meta -> acb160c4c6c651643a23e6c5a75d893f
+Assets/Starter Assets/Runtime/Mobile/UI/ToucScreenInputStyle.uss.meta:10:  script: {fileID: 12385, guid: 0000000000000000e000000000000000, type: 0}
+Assets/Starter Assets/Runtime/Mobile/UI/TouchScreenInputDefaultStyle.tss.meta:10:  script: {fileID: 12388, guid: 0000000000000000e000000000000000, type: 0}
+Assets/Starter Assets/Runtime/Mobile/UI/TouchScreenInputUI.uxml.meta:10:  script: {fileID: 13804, guid: 0000000000000000e000000000000000, type: 0}
+Assets/Starter Assets/Runtime/ThirdPersonController/Prefabs/MainCamera.prefab.meta -> f6d148d888ffbf54b9afe9936dfaec1f
+Assets/Starter Assets/Runtime/ThirdPersonController/Prefabs/PlayerArmature.prefab.meta -> 64dce48905ffd9b4293e595fa6941544
+Assets/Starter Assets/Runtime/ThirdPersonController/Prefabs/PlayerFollowCamera.prefab.meta -> a1a802ecaf6775746bb2a929fb554ad8
+Assets/TriForge Assets/Fantasy Worlds - DEMO Content/Materials/M_fwOF_Leaf_Branches_01.mat.meta -> ee4f6530b00c2944680137afac5a86e6
+Assets/TriForge Assets/Fantasy Worlds - DEMO Content/Materials/M_fwOF_TreeBillboard_01.mat.meta -> c49b102da323ba847aef3192323214ea
+Assets/TriForge Assets/Fantasy Worlds - DEMO Content/Materials/M_fwOF_TreeLOD_01.mat.meta -> 9ebd954b647601d499b43eb87d3ff45c
+Assets/TriForge Assets/Fantasy Worlds - DEMO Content/Materials/M_fwOF_Tree_Med_2A.mat.meta -> b1161e66ce2623f4ab74b3e15892fdac
+Assets/TriForge Assets/Fantasy Worlds - DEMO Content/Materials/M_fwOF_Tree_Med_2B.mat.meta -> 2540f6323ca664740814f40c7a2facbb
+Assets/TriForge Assets/Fantasy Worlds - DEMO Content/Prefabs/P_fwOF_Tree_M_2.prefab.meta -> f33ad934dfd440e4c96b0ca0f308ee97
