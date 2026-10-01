@@ -131,7 +131,7 @@ namespace PirateGame.Quests
 
         private static IEnumerator Shake(int times, float gap)
         {
-            var shaker = FindFirstObjectByType<CameraShake>();
+            var shaker = FindAnyObjectByType<CameraShake>();
             for (int i = 0; i < times && shaker != null; i++)
             {
                 shaker.Shake();

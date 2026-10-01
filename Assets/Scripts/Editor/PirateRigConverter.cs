@@ -93,7 +93,7 @@ namespace PirateGame.EditorTools
             PrefabUtility.UnloadPrefabContents(pr);
 
             foreach (var ai in Object.FindObjectsByType<PirateGame.Enemies.EnemyAI>(
-                         FindObjectsInactive.Include, FindObjectsSortMode.None))
+                         FindObjectsInactive.Include))
             {
                 var an = ai.GetComponent<Animator>();
                 if (an != null) an.avatar = generic;

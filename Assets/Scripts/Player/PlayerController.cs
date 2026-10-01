@@ -23,20 +23,20 @@ public class PlayerController : MonoBehaviour
     [Range(0, 1)]
     public float airControl = 0.5f;
 
-    public StateMachine movementSM;
-    public StandingState standing;
-    public CrouchingState crouching;
-    public JumpingState jumping;
-    public LandingState landing;
-    public SprintingState sprinting;
-    public SprintJumpState sprintJumping;
-    public CombatState combatting;
-    public AttackState attacking;
-    public RollState rolling;
-    public TimedAnimState specialAttacking;
-    public TimedAnimState thrustAttacking;
-    public TimedAnimState specialAttacking2;
-    public DefenseState defending;
+    [System.NonSerialized] public StateMachine movementSM;
+    [System.NonSerialized] public StandingState standing;
+    [System.NonSerialized] public CrouchingState crouching;
+    [System.NonSerialized] public JumpingState jumping;
+    [System.NonSerialized] public LandingState landing;
+    [System.NonSerialized] public SprintingState sprinting;
+    [System.NonSerialized] public SprintJumpState sprintJumping;
+    [System.NonSerialized] public CombatState combatting;
+    [System.NonSerialized] public AttackState attacking;
+    [System.NonSerialized] public RollState rolling;
+    [System.NonSerialized] public TimedAnimState specialAttacking;
+    [System.NonSerialized] public TimedAnimState thrustAttacking;
+    [System.NonSerialized] public TimedAnimState specialAttacking2;
+    [System.NonSerialized] public DefenseState defending;
 
     [HideInInspector]
     public float gravityValue = -9.81f;

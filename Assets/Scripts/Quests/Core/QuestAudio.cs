@@ -49,7 +49,7 @@ namespace PirateGame.Quests
         {
             if (instance == null)
             {
-                instance = FindFirstObjectByType<QuestAudio>();
+                instance = FindAnyObjectByType<QuestAudio>();
                 if (instance == null && Application.isPlaying)
                     instance = new GameObject("QuestAudio").AddComponent<QuestAudio>();
             }

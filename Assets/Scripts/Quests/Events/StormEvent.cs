@@ -241,7 +241,7 @@ namespace PirateGame.Quests
             float dist = QuestPlayer.TryGetPosition(out Vector3 pp) ? Vector3.Distance(pp, bottom) : 60f;
             yield return new WaitForSeconds(Mathf.Clamp(dist / 340f, 0.1f, 1.5f));
             QuestAudio.Play(QuestSound.Thunder, null, big ? 1f : 0.7f);
-            var shaker = FindFirstObjectByType<CameraShake>();
+            var shaker = FindAnyObjectByType<CameraShake>();
             if (shaker != null) shaker.Shake();
         }
 

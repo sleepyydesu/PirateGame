@@ -102,8 +102,8 @@ namespace PirateGame.Quests
             }
 
             Section("World");
-            Row(("Start storm", () => FindFirstObjectByType<StormEvent>()?.Begin()),
-                ("Skip storm", () => FindFirstObjectByType<StormEvent>()?.CompleteInstantly()),
+            Row(("Start storm", () => FindAnyObjectByType<StormEvent>()?.Begin()),
+                ("Skip storm", () => FindAnyObjectByType<StormEvent>()?.CompleteInstantly()),
                 ("Kill encounter", () => { foreach (var e in FindObjectsByType<CombatEncounter>()) e.DebugKillAll(); }),
                 ("Go to objective", TeleportToObjective));
 
@@ -148,7 +148,7 @@ namespace PirateGame.Quests
                 sb.Append($"<color=#9aa0a8>Weapon dmg x</color>{up.WeaponDamageMultiplier:0.00}   <color=#9aa0a8>Merchant discount</color> {Mathf.RoundToInt(up.GetShopDiscount("merchant") * 100)}%\n");
             foreach (CombatEncounter e in FindObjectsByType<CombatEncounter>())
                 sb.Append($"<color=#9aa0a8>Encounter '{e.Id}':</color> {e.Current} ({e.Alive} alive)\n");
-            StormEvent storm = FindFirstObjectByType<StormEvent>();
+            StormEvent storm = FindAnyObjectByType<StormEvent>();
             if (storm != null) sb.Append($"<color=#9aa0a8>Storm:</color> {storm.Current} {(storm.Current == StormEvent.Phase.Running ? $"{storm.Elapsed:0}s" : "")}\n");
             sb.Append($"\n<color=#9aa0a8>Recent events:</color>\n  {string.Join("\n  ", m.RecentEvents.Reverse().Take(8))}");
             info.text = sb.ToString();
