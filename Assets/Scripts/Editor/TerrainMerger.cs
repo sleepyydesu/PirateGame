@@ -521,9 +521,10 @@ public static class TerrainMerger
                 }
                 else
                 {
-                    // Outside all sources: false = HOLE (Unity: true = surface, false = hole).
-                    // This punches holes where no source terrain existed, so an irregular
-                    // footprint is preserved inside the rectangular bounding box.
+                    // Outside all sources: false = HOLE (Unity: true =
+                    // surface, false = hole). This punches holes where no
+                    // source terrain existed, preserving an irregular
+                    // footprint inside the rectangular bounding box.
                     mergedHoles[z, x] = false;
                 }
             }
@@ -1457,8 +1458,21 @@ public static class TerrainMerger
     }
 
     /// <summary>
-    /// Returns the first source terrain containing the world position.
-    /// Overlap priority/blending is not defined yet.
+    /// Returns the source terrain that should supply data for this world
+    /// position.
+    ///
+    /// Overlap rule: among all source terrains whose rectangular bounds
+    /// contain the position, prefer one that is actually solid there
+    /// (not a hole). This matters when a previously-merged terrain is
+    /// re-merged alongside other pieces: a merged terrain's rectangular
+    /// bounding box can extend, via holes, into an area that another
+    /// source terrain actually occupies. Without this check, the first
+    /// bbox match would win even if it is a hole there, silently
+    /// replacing real data with nothing ("cutting" the terrain).
+    ///
+    /// If every bbox match is a hole at this position (or none have hole
+    /// data), falls back to the first bbox match, same as before, so
+    /// genuinely empty regions are unaffected.
     /// </summary>
     private static TerrainInfo FindTerrainAtPosition(
         List<TerrainInfo> terrains,
@@ -1467,6 +1481,8 @@ public static class TerrainMerger
     {
         const float epsilon = 0.001f;
 
+        TerrainInfo firstBoundsMatch = null;
+
         foreach (TerrainInfo info in terrains)
         {
             float minX = info.position.x;
@@ -1474,14 +1490,60 @@ public static class TerrainMerger
             float minZ = info.position.z;
             float maxZ = info.position.z + info.size.z;
 
-            if (worldX >= minX - epsilon && worldX <= maxX + epsilon &&
-                worldZ >= minZ - epsilon && worldZ <= maxZ + epsilon)
-            {
+            bool inBounds =
+                worldX >= minX - epsilon && worldX <= maxX + epsilon &&
+                worldZ >= minZ - epsilon && worldZ <= maxZ + epsilon;
+
+            if (!inBounds)
+                continue;
+
+            if (firstBoundsMatch == null)
+                firstBoundsMatch = info;
+
+            if (IsSolidAtPosition(info, worldX, worldZ))
                 return info;
-            }
         }
 
-        return null;
+        // No bbox match was solid there (or none had hole data to check).
+        // Preserve prior behaviour: first bbox match, possibly a hole.
+        return firstBoundsMatch;
+    }
+
+    /// <summary>
+    /// True if the given source terrain has solid ground (not a hole) at
+    /// this world position. A source with no holes data is treated as
+    /// fully solid everywhere within its bounds. Uses the same
+    /// corner-aligned, nearest-sample mapping as MergeHoles().
+    /// </summary>
+    private static bool IsSolidAtPosition(
+        TerrainInfo info,
+        float worldX,
+        float worldZ)
+    {
+        if (info.holes == null || info.holesResolution <= 0)
+            return true;
+
+        WorldToSourceNormalized(
+            info,
+            worldX,
+            worldZ,
+            out float nx,
+            out float nz
+        );
+
+        int sourceX = Mathf.Clamp(
+            Mathf.RoundToInt(nx * (info.holesResolution - 1)),
+            0,
+            info.holesResolution - 1
+        );
+
+        int sourceZ = Mathf.Clamp(
+            Mathf.RoundToInt(nz * (info.holesResolution - 1)),
+            0,
+            info.holesResolution - 1
+        );
+
+        return info.holes[sourceZ, sourceX];
     }
 
     /// <summary>

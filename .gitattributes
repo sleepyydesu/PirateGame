@@ -39,3 +39,4 @@
 *.otf filter=lfs diff=lfs merge=lfs -text
 *.unitypackage filter=lfs diff=lfs merge=lfs -text
 Assets/Ikshya/FlipGameDev/Terrain&GrassPack/**/*.asset filter=lfs diff=lfs merge=lfs -text
+Assets/MergedTerrains/*.asset filter=lfs diff=lfs merge=lfs -text
