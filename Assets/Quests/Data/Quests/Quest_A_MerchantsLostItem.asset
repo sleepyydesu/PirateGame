@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7bb667cec1b34474c804b39b797315f1, type: 3}
+  m_Name: Quest_A_MerchantsLostItem
+  m_EditorClassIdentifier: Assembly-CSharp::PirateGame.Quests.QuestDefinition
+  questId: quest_a_merchants_lost_item
+  title: The Merchant's Lost Item
+  discoverHeadline: 
+  description: A sudden storm wrecked a merchant's ship off the coast. He made it
+    ashore, but an important item was lost in the wreckage. Search the coast near
+    the wreck and bring it back to him.
+  questType: 1
+  giverName: Merchant
+  requirements:
+  - kind: 1
+    quest: {fileID: 0}
+    flag: storm_done
+  startMode: 0
+  discoverOnEvent: 
+  promptOnDiscover: 1
+  stages:
+  - id: Active_Search
+    stateLabel: 
+    objective: Search for the merchant's lost item.
+    targetId: search_area
+    showMarker: 1
+    showTrail: 1
+    completeOnEvent: item_collected:merchant_item
+    requiredCount: 1
+    revertOnEvent: 
+    requiredItem: {fileID: 0}
+    revertToStageId: 
+    setFlagOnEnter: 
+    setFlagOnComplete: 
+  - id: Active_Return
+    stateLabel: 
+    objective: Return the item to the merchant.
+    targetId: merchant_shop
+    showMarker: 1
+    showTrail: 1
+    completeOnEvent: delivered:merchant_item
+    requiredCount: 1
+    revertOnEvent: 
+    requiredItem: {fileID: 11400000, guid: 155d347e611fd5a4e8eb665e1729ec41, type: 2}
+    revertToStageId: Active_Search
+    setFlagOnEnter: 
+    setFlagOnComplete: 
+  rewards:
+  - {fileID: 11400000, guid: 19082198e94342747ac1258a3f2bca3f, type: 2}
+  rewardIsChoice: 0
+  setFlagsOnComplete: []
+  clearFlagsOnComplete: []
+  lockedLabel: Inactive
+  availableLabel: Available
+  discoveredLabel: Discovered
+  completedLabel: Completed
+  lockedFlagLabels:
+  - flag: storm_started
+    label: Storm_Triggered
