@@ -9,12 +9,17 @@ public sealed class SwordSlashRibbon : MonoBehaviour
 {
     struct BladeSample
     {
+        public Vector3 rawBase, rawTip;
         public Vector3 bladeBase;
         public Vector3 bladeTip;
         public float time;
     }
 
     readonly List<BladeSample> samples = new();
+    readonly List<Vector3> vertices = new();
+    readonly List<Vector2> uvs = new();
+    readonly List<Color> colors = new();
+    readonly List<int> triangles = new();
 
     Transform bladeBase;
     Transform bladeTip;
@@ -87,8 +92,8 @@ public sealed class SwordSlashRibbon : MonoBehaviour
         }
 
         BladeSample lastSample = samples[^1];
-        float baseMovement = Vector3.Distance(lastSample.bladeBase, bladeBase.position);
-        float tipMovement = Vector3.Distance(lastSample.bladeTip, bladeTip.position);
+        float baseMovement = Vector3.Distance(lastSample.rawBase, bladeBase.position);
+        float tipMovement = Vector3.Distance(lastSample.rawTip, bladeTip.position);
 
         if (baseMovement >= minimumSampleDistance || tipMovement >= minimumSampleDistance)
             AddSample();
@@ -103,6 +108,7 @@ public sealed class SwordSlashRibbon : MonoBehaviour
 
         samples.Add(new BladeSample
         {
+            rawBase = bladeBase.position, rawTip = bladeTip.position,
             bladeBase = scaledBase,
             bladeTip = scaledTip,
             time = Time.time
@@ -130,11 +136,8 @@ public sealed class SwordSlashRibbon : MonoBehaviour
         }
 
         int vertexCount = samples.Count * 2;
-        Vector3[] vertices = new Vector3[vertexCount];
-        Vector2[] uvs = new Vector2[vertexCount];
-        Color[] colors = new Color[vertexCount];
-        // Add both winding orders so the ribbon is visible from either side.
-        int[] triangles = new int[(samples.Count - 1) * 12];
+        vertices.Clear(); uvs.Clear(); colors.Clear(); triangles.Clear();
+        // Reuse CPU buffers after initial growth; double winding is preserved.
 
         for (int i = 0; i < samples.Count; i++)
         {
@@ -144,35 +147,23 @@ public sealed class SwordSlashRibbon : MonoBehaviour
             Color color = ribbonColor;
             color.a *= 1f - age01;
 
-            vertices[vertexIndex] = sample.bladeBase;
-            vertices[vertexIndex + 1] = sample.bladeTip;
-            uvs[vertexIndex] = new Vector2(age01, 0f);
-            uvs[vertexIndex + 1] = new Vector2(age01, 1f);
-            colors[vertexIndex] = color;
-            colors[vertexIndex + 1] = color;
+            vertices.Add(sample.bladeBase); vertices.Add(sample.bladeTip);
+            uvs.Add(new Vector2(age01, 0f)); uvs.Add(new Vector2(age01, 1f));
+            colors.Add(color); colors.Add(color);
 
             if (i == samples.Count - 1) continue;
 
-            int triangleIndex = i * 12;
-            triangles[triangleIndex] = vertexIndex;
-            triangles[triangleIndex + 1] = vertexIndex + 2;
-            triangles[triangleIndex + 2] = vertexIndex + 1;
-            triangles[triangleIndex + 3] = vertexIndex + 1;
-            triangles[triangleIndex + 4] = vertexIndex + 2;
-            triangles[triangleIndex + 5] = vertexIndex + 3;
-            triangles[triangleIndex + 6] = vertexIndex + 1;
-            triangles[triangleIndex + 7] = vertexIndex + 2;
-            triangles[triangleIndex + 8] = vertexIndex;
-            triangles[triangleIndex + 9] = vertexIndex + 3;
-            triangles[triangleIndex + 10] = vertexIndex + 2;
-            triangles[triangleIndex + 11] = vertexIndex + 1;
+            triangles.Add(vertexIndex); triangles.Add(vertexIndex + 2); triangles.Add(vertexIndex + 1);
+            triangles.Add(vertexIndex + 1); triangles.Add(vertexIndex + 2); triangles.Add(vertexIndex + 3);
+            triangles.Add(vertexIndex + 1); triangles.Add(vertexIndex + 2); triangles.Add(vertexIndex);
+            triangles.Add(vertexIndex + 3); triangles.Add(vertexIndex + 2); triangles.Add(vertexIndex + 1);
         }
 
         ribbonMesh.Clear();
-        ribbonMesh.vertices = vertices;
-        ribbonMesh.uv = uvs;
-        ribbonMesh.colors = colors;
-        ribbonMesh.triangles = triangles;
+        ribbonMesh.SetVertices(vertices);
+        ribbonMesh.SetUVs(0, uvs);
+        ribbonMesh.SetColors(colors);
+        ribbonMesh.SetTriangles(triangles, 0);
         ribbonMesh.RecalculateBounds();
     }
 
@@ -193,6 +184,12 @@ public sealed class SwordSlashRibbon : MonoBehaviour
             {
                 Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit")
                                 ?? Shader.Find("Sprites/Default");
+                if (shader == null)
+                {
+                    Debug.LogError("Assign an explicit ribbon material: no fallback shader available.", this);
+                    renderer.enabled = false;
+                    return;
+                }
                 fallbackMaterial = new Material(shader) { name = "Runtime Sword Slash Ribbon Material" };
                 if (fallbackMaterial.HasProperty("_BaseColor"))
                     fallbackMaterial.SetColor("_BaseColor", ribbonColor);
@@ -204,6 +201,13 @@ public sealed class SwordSlashRibbon : MonoBehaviour
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows = false;
         }
+    }
+
+    void OnEnable() { if (ribbonObject != null) ribbonObject.SetActive(true); }
+    void OnDisable()
+    {
+        emitting = false; Clear();
+        if (ribbonObject != null) ribbonObject.SetActive(false);
     }
 
     void OnDestroy()

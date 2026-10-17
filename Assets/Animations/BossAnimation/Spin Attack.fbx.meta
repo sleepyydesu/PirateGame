@@ -70,6 +70,55 @@ ModelImporter:
         floatParameter: 0
         intParameter: 0
         messageOptions: 0
+      - time: 0.11489753
+        functionName: AE_Commit
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.39403835
+        functionName: AE_HitboxOn
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.6393098
+        functionName: AE_HitboxOff
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.91756845
+        functionName: AE_ActionComplete
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.10079341
+        functionName: AE_PrepareStrike
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.13323945
+        functionName: AE_AttackStepOn
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.67759585
+        functionName: AE_AttackStepOff
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
       transformMask: []
       maskType: 3
       maskSource: {instanceID: 0}

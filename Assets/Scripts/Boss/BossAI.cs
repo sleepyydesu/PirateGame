@@ -1,893 +1,1508 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Events;
 using PirateGame.Combat;
-using System;
 using Random = UnityEngine.Random;
 
 namespace PirateGame.Enemies
 {
-    [RequireComponent(typeof(NavMeshAgent))]
-    [RequireComponent(typeof(Health))]
-    public class BossAI : MonoBehaviour
+    [RequireComponent(typeof(NavMeshAgent), typeof(Health))]
+    public sealed class BossAI : MonoBehaviour
     {
         public enum State
         {
             Idle,
             Chase,
+            Circle,
             Attack,
+            Recovery,
+            Taunt,
+            Fatigue,
             PhaseTransition,
             Stagger,
-            Dead
+            Dead,
+            ReturnHome
         }
 
-        private enum AttackSubPhase
+        [Serializable]
+        public sealed class Phase
         {
-            None,
-            Windup,
-            Impact,
-            Recovery
+            public string name = "The Gentleman";
+            [Range(0f, 1f)] public float healthThreshold = 1f;
+            [Min(0.1f)] public float speedMultiplier = 1f;
+            [Min(0.1f)] public float minimumRecovery = 0.6f;
+            [Range(0, 3)] public int maxExtensions = 1;
         }
-
-        [System.Serializable]
-        public class BossAttack
+        [Serializable]
+        public sealed class ActionAnimation
         {
-            public string name;
-
-            [Tooltip("Animator Trigger parameter. Example: attack_slam")]
-            public string animatorTrigger;
-
-            public float windupTime = 0.6f;
-            public float recoveryTime = 0.8f;
-
-            public float range = 2.2f;
-            public float damage = 20f;
-
-            [Range(0f, 1f)]
-            public float weight = 1f;
+            public string trigger;
+            public string fullStateName;
+            [Min(0.2f)] public float watchdog = 4f;
         }
-
-        [System.Serializable]
-        public class BossPhase
+        [Header("References (assign target explicitly)")]
+        [SerializeField] private Transform player;
+        [SerializeField] private Animator animator;
+        [SerializeField] private BossWeaponSweep weapon;
+        [SerializeField] private CaptainAttack[] attacks;
+        private bool jumpActive, jumpStarted, jumpLanded;
+        private Vector3 jumpStart, jumpEnd;
+        private float jumpStartNormalized;
+        private bool attackStepOpen;
+        private float attackStepRemaining;
+        [SerializeField]
+        private Phase[] phases = {
+            new Phase(), new Phase { name = "No More Courtesy", healthThreshold = 0.5f,
+                speedMultiplier = 1.12f, minimumRecovery = 0.65f, maxExtensions = 1 }
+        };
+        [Header("Animation contracts; full paths must match your controller")]
+        [SerializeField] private string locomotionState = "Base Layer.Locomotion";
+        [SerializeField]
+        private ActionAnimation roar = new ActionAnimation
         {
-            public string phaseName;
-
-            [Range(0f, 1f)]
-            [Tooltip("Phase activates when boss HP percentage reaches this value.")]
-            public float healthThreshold = 1f;
-
-            public BossAttack[] attacks;
-
-            public float moveSpeedMultiplier = 1f;
-            public float attackCooldown = 1.2f;
-
-            [Tooltip("Animator Trigger for phase transition. Example: roar_phase2")]
-            public string phaseTransitionTrigger;
-        }
-
-        // ================================================================
-        // Detection & Movement
-        // ================================================================
-
-        [Header("Detection & Movement")]
-
+            trigger = "Roar",
+            fullStateName = "Base Layer.roar",
+            watchdog = 4.5f
+        };
         [SerializeField]
-        private float detectRadius = 20f;
-
-        [SerializeField]
-        private float baseWalkSpeed = 3.5f;
-
-        [SerializeField]
-        private float baseChaseSpeed = 5.5f;
-
-        [SerializeField]
-        private float acceleration = 20f;
-
-        // ================================================================
-        // Combat
-        // ================================================================
-
-        [Header("Combat")]
-
-        [SerializeField]
-        private float hitStaggerTime = 0.4f;
-
-        [SerializeField]
-        private float phaseTransitionDuration = 2f;
-
-        // ================================================================
-        // Phases
-        // ================================================================
-
-        [Header("Phases (ordered highest HP threshold first)")]
-
-        [SerializeField]
-        private BossPhase[] phases;
-
-        // ================================================================
-        // Animation
-        // ================================================================
-
-        [Header("Animation")]
-
-        [SerializeField]
-        private Animator animator;
-
-        [Header("Poise/Stagger Resistance")]
-        [SerializeField] private float maxPoise = 50f;
-        [SerializeField] private float poiseRegenPerSecond = 15f;
-        [SerializeField] private float poiseRegenDelay = 1.5f;
-
-        private float currentPoise;
-        private float poiseRegenTimer;
-
-        // ================================================================
-        // Public properties
-        // ================================================================
-
-        public State CurrentState { get; private set; } = State.Idle;
-
-        public bool IsInParryWindow
+        private ActionAnimation staggerAnimation = new ActionAnimation
         {
-            get
-            {
-                return attackSubPhase == AttackSubPhase.Windup;
-            }
-        }
+            trigger = "Hit",
+            fullStateName = "Base Layer.takedamage",
+            watchdog = 2.5f
+        };
+        [SerializeField] private ActionAnimation tauntAnimation = new ActionAnimation();
+        [SerializeField] private string deathTrigger = "Die";
+        [Header("Perception / footwork")]
+        [SerializeField] private LayerMask environment;
+        [SerializeField, Min(1f)] private float detectionRadius = 18f;
+        [SerializeField, Min(1f)] private float leashRadius = 25f;
+        [SerializeField, Min(0f)] private float recognitionTime = 0.35f;
+        [SerializeField, Min(0.1f)] private float walkSpeed = 2.2f;
+        [SerializeField, Min(0.1f)] private float chaseSpeed = 4.5f;
+        [SerializeField, Min(0.1f)] private float preferredDistance = 2.2f;
+        [Header("Return home")]
+        [SerializeField, Min(0.1f)] private float returnHomeSpeed = 3.5f;
+        [SerializeField, Min(0.2f)] private float homeArrivalDistance = 0.6f;
+        [SerializeField, Min(0f)] private float homeWaitSeconds = 1f;
+        [Header("Projectile release point")]
+        [SerializeField] private Transform projectileSpawnPoint;
+        [SerializeField] private Transform airSlashBladeBase;
+        [SerializeField] private Transform airSlashBladeTip;
 
-        // ================================================================
-        // Private variables
-        // ================================================================
+        private bool projectileQueued;
+        private bool projectileFired;
+        private int queuedProjectileStateHash;
+        private Vector3 queuedProjectileAim;
+        private float nextRangedDecisionAt;
 
+        private BossStateMachine.Node returnHome;
+        private bool returningHome;
+        private float homeWaitUntil = -1f;
+        [SerializeField, Min(0.1f)]
+        private float returnReengageDistance = 6f;
+
+        [SerializeField, Min(0.1f)]
+        private float returnChaseDistance = 12f;
+
+        private bool fightingAfterReturn;
+        private float resumedChaseDistance;
+        [Header("Personality: arrogance creates openings, fatigue limits pressure")]
+        [SerializeField, Range(0f, 1f)] private float arrogance = 0.7f;
+        [Header("Missed attack reaction")]
+        [SerializeField, Min(0.1f)]
+        private float noticeMissDistance = 6f;
+
+        [SerializeField]
+        private bool testTauntOnMiss;
+        [SerializeField, Min(0.1f)] private float fatigueThreshold = 75f;
+        [SerializeField, Min(0.1f)] private float fatigueRestSeconds = 1.8f;
+        [SerializeField, Min(0f)] private float fatigueDecay = 12f;
+        [SerializeField, Min(0f)] private float recoveryFreezeSeconds = 0.3f;
+        [SerializeField] private Vector2 reactionDelay = new Vector2(0.3f, 0.5f);
+        [Header("Poise: separate tuning axis from health damage")]
+        [SerializeField, Min(1f)] private float maxPoise = 60f;
+        [SerializeField, Min(0f)] private float poiseDamageMultiplier = 1f;
+        [SerializeField, Min(0f)] private float poiseRegen = 12f;
+        [SerializeField, Min(0f)] private float poiseRegenDelay = 2f;
+        [Header("Presentation hooks (camera, audio, subtitles, VFX)")]
+        public UnityEvent onPhaseTransitionStarted = new UnityEvent();
+        public UnityEvent onPhaseTransitionFinished = new UnityEvent();
+        public UnityEvent onTaunt = new UnityEvent();
+        public UnityEvent onCommittedAttack = new UnityEvent();
+        public UnityEvent onDeath = new UnityEvent();
+
+        public State CurrentState { get; private set; }
+        public bool IsInParryWindow => CurrentState == State.Attack && parryWindow;
+        public int CurrentPhaseIndex => phaseIndex;
+        public float Fatigue => fatigue;
+        private Health health, playerHealth;
         private NavMeshAgent agent;
-        private Health health;
-
-        private Transform player;
-        private Health playerHealth;
-
-        private int currentPhaseIndex;
-
-        private BossAttack currentAttack;
-
-        private AttackSubPhase attackSubPhase =
-            AttackSubPhase.None;
-
-        private float stateTimer;
-        private float attackCooldownTimer;
-
-        // ================================================================
-        // Animator hashes
-        // ================================================================
-
-        private static readonly int SpeedParam =
-            Animator.StringToHash("Speed");
-
-        private static readonly int HitParam =
-            Animator.StringToHash("Hit");
-
-        private static readonly int DieParam =
-            Animator.StringToHash("Die");
-
-        // ================================================================
-        // Current Phase
-        // ================================================================
-
-        private BossPhase CurrentPhase
-        {
-            get
-            {
-                if (phases == null || phases.Length == 0)
-                    return null;
-
-                currentPhaseIndex =
-                    Mathf.Clamp(
-                        currentPhaseIndex,
-                        0,
-                        phases.Length - 1
-                    );
-
-                return phases[currentPhaseIndex];
-            }
-        }
-
-        // ================================================================
-        // Unity
-        // ================================================================
+        private BossStateMachine machine;
+        private BossStateMachine.Node root, combat, idle, approach, circle, attack,
+            recover, taunt, rest, transition, stagger, dead;
+        private readonly Dictionary<CaptainAttack, float> readyAt = new Dictionary<CaptainAttack, float>();
+        private readonly List<CaptainAttack> candidates = new List<CaptainAttack>();
+        private readonly List<float> scores = new List<float>();
+        private readonly HashSet<int> triggers = new HashSet<int>();
+        private CaptainAttack currentAttack, lastAttack, queuedChain;
+        private Vector3 home, lastSeen;
+        private int phaseIndex, requestedPhase, extensions, expectedHash, enteredHash;
+        private float enteredAt, actionAge, actionTimeout, decisionAt, pathAt, seenAt,
+            recognizedFor, poise, poiseDamagedAt, fatigue, recoveryUntil, tauntReadyAt,
+            healObservedAt = float.NegativeInfinity, healReactAt, whiffObservedAt = float.NegativeInfinity,
+            whiffReactAt, circleSign = 1f;
+        private bool committed, parryWindow, chainDecided, stateExited, speedParameter, configured, fatigueOwed;
+        private static readonly int SpeedHash = Animator.StringToHash("Speed");
+        private static readonly int MoveXHash = Animator.StringToHash("MoveX");
+        private static readonly int MoveZHash = Animator.StringToHash("MoveZ");
+        private bool directionParameters;
+        private Phase CurrentPhase => phases[phaseIndex];
+        private bool OnMesh => agent != null && agent.enabled && agent.isOnNavMesh;
+        private bool TargetAlive => player != null && (playerHealth == null || !playerHealth.IsDead);
+        private float Distance => player == null ? float.PositiveInfinity :
+            Vector3.Distance(transform.position, player.position);
 
         private void Awake()
         {
-            agent = GetComponent<NavMeshAgent>();
-            health = GetComponent<Health>();
-
-            if (animator == null)
-                animator = GetComponentInChildren<Animator>();
-
-            currentPoise = maxPoise;
+            agent = GetComponent<NavMeshAgent>(); health = GetComponent<Health>();
+            if (animator == null) animator = GetComponentInChildren<Animator>();
+            home = transform.position; poise = maxPoise;
+            agent.updateRotation = false; // One owner of rotation; never NavMesh + code simultaneously.
+            CacheAnimatorParameters();
+            BuildHierarchy();
         }
-
-        private void OnEnable()
-        {
-            if (health != null)
-            {
-                health.OnDamaged += HandleDamaged;
-                health.OnDeath += HandleDeath;
-            }
-        }
-
+        private void OnEnable() { health.OnDamaged += HandleDamaged; health.OnDeath += HandleDeath; }
         private void OnDisable()
         {
-            if (health != null)
+            health.OnDamaged -= HandleDamaged; health.OnDeath -= HandleDeath;
+            CancelAction(); Stop();
+            // Pool reset/revival is deliberately an encounter-level responsibility.
+        }
+
+        private void CacheAnimatorParameters()
+        {
+            triggers.Clear();
+            speedParameter = false;
+            if (animator == null) return;
+            foreach (var p in animator.parameters)
             {
-                health.OnDamaged -= HandleDamaged;
-                health.OnDeath -= HandleDeath;
+                if (p.type == AnimatorControllerParameterType.Trigger) triggers.Add(p.nameHash);
+                if (p.nameHash == SpeedHash && p.type == AnimatorControllerParameterType.Float) speedParameter = true;
+                if ((p.nameHash == MoveXHash || p.nameHash == MoveZHash) &&
+                    p.type == AnimatorControllerParameterType.Float) directionParameters = true;
             }
         }
 
         private void Start()
         {
-            FindPlayer();
-
-            currentPhaseIndex = 0;
-
-            if (phases == null || phases.Length == 0)
+            CacheAnimatorParameters();
+            if (player == null)
             {
-                Debug.LogError(
-                    $"{name}: BossAI has no phases configured.",
-                    this
-                );
+                GameObject found = GameObject.FindGameObjectWithTag("Player");
+                if (found != null) player = found.transform;
+            }
+            configured = ValidateConfiguration();
+            if (!configured) { enabled = false; return; }
+            SetTarget(player); machine.Change(idle);
+            if (health.IsDead) HandleDeath();
+        }
+        public void SetTarget(Transform target)
+        {
+            player = target; playerHealth = target == null ? null : target.GetComponentInParent<Health>();
+            healObservedAt = whiffObservedAt = float.NegativeInfinity;
+        }
+        private bool ValidateConfiguration()
+        {
+            bool ok = animator != null && animator.runtimeAnimatorController != null &&
+                animator.GetComponent<BossAnimationRelay>() != null && weapon != null && attacks != null && attacks.Length > 0 &&
+                phases != null && phases.Length >= 2 && OnMesh;
+            if (!ok) { Debug.LogError("Boss: assign Animator with controller/relay, weapon, attacks, two phases and bake NavMesh.", this); return false; }
+            if (player == null) Debug.LogWarning("Boss has no target. Call SetTarget before the encounter.", this);
+            ok &= Check(animator.HasState(0, Animator.StringToHash(locomotionState)),
+    $"Locomotion State '{locomotionState}' not found in the Animator.");
+            ok &= CheckAction("Roar", roar);
+            ok &= CheckAction("Stagger Animation", staggerAnimation);
+            if (!string.IsNullOrEmpty(tauntAnimation.trigger)) ok &= CheckAction("Taunt Animation", tauntAnimation);
 
-                return;
+            var stateNames = new HashSet<string>();
+            for (int i = 0; i < attacks.Length; i++)
+            {
+                CaptainAttack a = attacks[i];
+                if (!Check(a != null, $"Attacks slot {i} is empty.")) { ok = false; continue; }
+                ok &= Check(triggers.Contains(Animator.StringToHash(a.trigger)),
+                    $"{a.name}: trigger '{a.trigger}' is not an Animator trigger parameter.");
+                ok &= Check(animator.HasState(0, Animator.StringToHash(a.fullStateName)),
+                    $"{a.name}: state '{a.fullStateName}' not found.");
+                ok &= Check(a.maxRange > a.minRange, $"{a.name}: Max Range must be bigger than Min Range.");
+                ok &= Check(stateNames.Add(a.fullStateName),
+                    $"{a.name}: another attack already uses state '{a.fullStateName}'.");
+                if (a.followup != null)
+                    ok &= Check(Array.IndexOf(attacks, a.followup) >= 0 && a.followup != a,
+                        $"{a.name}: Followup must be in the Attacks list and not itself.");
             }
 
-            EnterState(State.Idle);
+            for (int i = 0; i < phases.Length; i++)
+            {
+                ok &= Check(phases[i] != null, $"Phase {i} is empty.");
+                if (i > 0 && phases[i] != null && phases[i - 1] != null)
+                    ok &= Check(phases[i].healthThreshold < phases[i - 1].healthThreshold,
+                        $"Phase {i} threshold must be lower than phase {i - 1}.");
+            }
+            return ok;
         }
-
+        private bool ValidateAction(ActionAnimation a)
+        {
+            return a != null && !string.IsNullOrEmpty(a.trigger) &&
+                triggers.Contains(Animator.StringToHash(a.trigger)) &&
+                animator.HasState(0, Animator.StringToHash(a.fullStateName));
+        }
+        private void BuildHierarchy()
+        {
+            machine = new BossStateMachine(); root = new BossStateMachine.Node("Alive");
+            combat = new BossStateMachine.Node("Combat", root) { Tick = TickCombat };
+            idle = Leaf("Idle", root, State.Idle, Stop, TickIdle);
+            returnHome = Leaf(
+                "ReturnHome",
+                root,
+                State.ReturnHome,
+                EnterReturnHome,
+                TickReturnHome
+            );
+            approach = Leaf("Approach", combat, State.Chase, null, TickApproach);
+            circle = Leaf("Circle", combat, State.Circle, () =>
+            {
+                circleSign = Random.value < 0.5f ? -1f : 1f; decisionAt = Time.time + Random.Range(0.4f, 0.7f);
+            }, TickCircle);
+            attack = Leaf("Attack", combat, State.Attack, null, TickAttack);
+            recover = Leaf("Recovery", combat, State.Recovery, () => { Stop(); ForceLocomotion(); }, () =>
+            {
+                if (player != null && !fatigueOwed && Time.time - enteredAt >= recoveryFreezeSeconds)
+                    CircleMovement();
+                if (Time.time >= recoveryUntil) machine.Change(fatigueOwed ? rest : circle);
+                return true;
+            });
+            rest = Leaf("Fatigue", combat, State.Fatigue, () =>
+            {
+                Stop(); ForceLocomotion(); recoveryUntil = Time.time + fatigueRestSeconds;
+            }, () => { if (Time.time >= recoveryUntil) { fatigue = 0f; fatigueOwed = false; machine.Change(circle); } return true; });
+            taunt = Leaf("Taunt", combat, State.Taunt, () =>
+            {
+                Stop(); tauntReadyAt = Time.time + 12f;
+                BeginAnimation(tauntAnimation.trigger, tauntAnimation.fullStateName, tauntAnimation.watchdog);
+                onTaunt.Invoke();
+            }, TickAction);
+            transition = Leaf("PhaseTransition", root, State.PhaseTransition, () =>
+            {
+                Stop(); BeginAnimation(roar.trigger, roar.fullStateName, roar.watchdog);
+                onPhaseTransitionStarted.Invoke();
+            }, TickAction);
+            stagger = Leaf("Stagger", root, State.Stagger, () =>
+            {
+                Stop(); BeginAnimation(staggerAnimation.trigger, staggerAnimation.fullStateName, staggerAnimation.watchdog);
+            }, TickAction);
+            // Dead is outside Alive: all future perception, reactions and poise work stops.
+            dead = Leaf("Dead", null, State.Dead, () =>
+            {
+                Stop(); if (agent.enabled) agent.enabled = false;
+                Trigger(deathTrigger); onDeath.Invoke();
+            }, null);
+        }
+        private BossStateMachine.Node Leaf(string name, BossStateMachine.Node parent, State state,
+            Action enter, Func<bool> tick)
+        {
+            return new BossStateMachine.Node(name, parent)
+            {
+                Enter = () => { CurrentState = state; enteredAt = Time.time; enter?.Invoke(); },
+                Exit = CancelAction,
+                Tick = tick
+            };
+        }
         private void Update()
-        {   
-            attackCooldownTimer -= Time.deltaTime;
-
-            if (poiseRegenTimer > 0f)
-            {
-                poiseRegenTimer -= Time.deltaTime;
-            }
-            else if (currentPoise < maxPoise)
-            {
-                currentPoise = Math.Min(maxPoise, currentPoise + poiseRegenPerSecond * Time.deltaTime);
-            }
-
-            if (CurrentState == State.Dead)
-                return;
-
-            if (phases == null || phases.Length == 0)
-                return;
-
-            if (player == null &&
-                Time.frameCount % 60 == 0)
-            {
-                FindPlayer();
-            }
-
-            switch (CurrentState)
-            {
-                case State.Idle:
-                    TickIdle();
-                    break;
-
-                case State.Chase:
-                    TickChase();
-                    break;
-
-                case State.Attack:
-                    TickAttack();
-                    break;
-
-                case State.PhaseTransition:
-                    TickPhaseTransition();
-                    break;
-
-                case State.Stagger:
-                    TickStagger();
-                    break;
-            }
-
-            UpdateAnimator();
-        }
-
-        // ================================================================
-        // State Machine
-        // ================================================================
-
-        private void EnterState(State next)
         {
-            CurrentState = next;
-            stateTimer = 0f;
-
-            switch (next)
+            if (!configured || CurrentState == State.Dead) return;
+            if (health.IsDead) { HandleDeath(); return; } // Death has priority over cinematic/stagger.
+            if (TargetAlive && Visible()) { lastSeen = player.position; seenAt = Time.time; }
+            if (CurrentState != State.Attack) fatigue = Mathf.Max(0f, fatigue - fatigueDecay * Time.deltaTime);
+            if (Time.time - poiseDamagedAt >= poiseRegenDelay && CurrentState != State.Stagger)
+                poise = Mathf.Min(maxPoise, poise + poiseRegen * Time.deltaTime);
+            machine.Tick();
+            if (animator != null && (speedParameter || directionParameters))
             {
-                case State.Idle:
-
-                    if (agent.enabled)
-                        agent.isStopped = true;
-
-                    attackSubPhase = AttackSubPhase.None;
-
-                    break;
-
-                case State.Chase:
-
-                    if (agent.enabled)
-                    {
-                        agent.isStopped = false;
-
-                        float speedMultiplier =
-                            CurrentPhase != null
-                                ? CurrentPhase.moveSpeedMultiplier
-                                : 1f;
-
-                        agent.speed =
-                            baseChaseSpeed * speedMultiplier;
-
-                        agent.acceleration = acceleration;
-                        agent.stoppingDistance = 1.5f;
-                    }
-
-                    attackSubPhase = AttackSubPhase.None;
-
-                    break;
-
-                case State.Attack:
-
-                    if (CurrentPhase == null ||
-                        CurrentPhase.attacks == null ||
-                        CurrentPhase.attacks.Length == 0)
-                    {
-                        EnterState(State.Chase);
-                        return;
-                    }
-
-                    if (agent.enabled)
-                        agent.isStopped = true;
-
-                    attackSubPhase =
-                        AttackSubPhase.Windup;
-
-                    currentAttack = PickAttack();
-
-                    if (currentAttack != null &&
-                        !string.IsNullOrEmpty(
-                            currentAttack.animatorTrigger))
-                    {
-                        SetTrigger(
-                            Animator.StringToHash(
-                                currentAttack.animatorTrigger
-                            )
-                        );
-                    }
-
-                    break;
-
-                case State.PhaseTransition:
-
-                    if (agent.enabled)
-                        agent.isStopped = true;
-
-                    attackSubPhase =
-                        AttackSubPhase.None;
-
-                    if (CurrentPhase != null &&
-                        !string.IsNullOrEmpty(
-                            CurrentPhase.phaseTransitionTrigger))
-                    {
-                        SetTrigger(
-                            Animator.StringToHash(
-                                CurrentPhase.phaseTransitionTrigger
-                            )
-                        );
-                    }
-
-                    break;
-
-                case State.Stagger:
-
-                    if (agent.enabled)
-                        agent.isStopped = true;
-
-                    attackSubPhase =
-                        AttackSubPhase.None;
-
-                    break;
-
-                case State.Dead:
-
-                    if (agent.enabled)
-                    {
-                        agent.isStopped = true;
-                        agent.enabled = false;
-                    }
-
-                    attackSubPhase =
-                        AttackSubPhase.None;
-
-                    SetTrigger(DieParam);
-
-                    foreach (
-                        Collider col
-                        in GetComponentsInChildren<Collider>()
-                    )
-                    {
-                        col.enabled = false;
-                    }
-
-                    break;
-            }
-        }
-
-        // ================================================================
-        // State Ticks
-        // ================================================================
-
-        private void TickIdle()
-        {
-            if (player == null)
-                return;
-
-            float distance =
-                Vector3.Distance(
-                    transform.position,
-                    player.position
-                );
-
-            if (distance <= detectRadius)
-            {
-                EnterState(State.Chase);
-            }
-        }
-
-        private void TickChase()
-        {
-            if (player == null)
-            {
-                EnterState(State.Idle);
-                return;
-            }
-
-            float distance =
-                Vector3.Distance(
-                    transform.position,
-                    player.position
-                );
-
-            FaceTowards(player.position);
-
-            float attackRange = 2f;
-
-            if (CurrentPhase != null &&
-                CurrentPhase.attacks != null &&
-                CurrentPhase.attacks.Length > 0)
-            {
-                attackRange = GetMaxAttackRange();
-            }
-
-            if (distance <= attackRange)
-            {
-                if (attackCooldownTimer <= 0f)
+                Vector3 localVelocity = OnMesh ? transform.InverseTransformDirection(agent.velocity) : Vector3.zero;
+                if (speedParameter)
+                    animator.SetFloat(SpeedHash, localVelocity.magnitude / chaseSpeed, 0.1f, Time.deltaTime);
+                if (directionParameters)
                 {
-                    EnterState(State.Attack);
-                    return;
+                    animator.SetFloat(MoveXHash, localVelocity.x / chaseSpeed, 0.1f, Time.deltaTime);
+                    animator.SetFloat(MoveZHash, localVelocity.z / chaseSpeed, 0.1f, Time.deltaTime);
+                }
+            }
+        }
+
+        private bool Check(bool condition, string message)
+        {
+            if (!condition) Debug.LogError("Boss setup problem: " + message, this);
+            return condition;
+        }
+
+        private bool CheckAction(string label, ActionAnimation a)
+        {
+            if (a == null || string.IsNullOrEmpty(a.trigger))
+                return Check(false, $"{label}: trigger is empty.");
+            bool hasTrigger = Check(triggers.Contains(Animator.StringToHash(a.trigger)),
+                $"{label}: trigger '{a.trigger}' is not an Animator trigger parameter.");
+            bool hasState = Check(animator.HasState(0, Animator.StringToHash(a.fullStateName ?? "")),
+                $"{label}: state '{a.fullStateName}' not found.");
+            return hasTrigger && hasState;
+        }
+
+        private bool TickIdle()
+        {
+            Stop();
+
+            // Only notice players inside the boss's allowed home area.
+            bool canSeePlayer =
+                TargetAlive &&
+                Distance <= detectionRadius &&
+                Vector3.Distance(player.position, home) <= leashRadius &&
+                Visible();
+
+            if (canSeePlayer)
+                recognizedFor += Time.deltaTime;
+            else
+                recognizedFor = 0f;
+
+            if (canSeePlayer && recognizedFor >= recognitionTime)
+            {
+                lastSeen = player.position;
+                seenAt = Time.time;
+
+                machine.Change(approach);
+            }
+
+            return true;
+        }
+
+        private bool TickCombat()
+        {
+            bool shouldReturn =
+                !TargetAlive ||
+                Time.time - seenAt > 3f;
+
+            if (!shouldReturn)
+            {
+                if (fightingAfterReturn)
+                {
+                    // After turning back to fight, use distance
+                    // from the player instead of distance from home.
+                    float minimumLimit = Mathf.Max(
+                        returnChaseDistance,
+                        returnReengageDistance + 1f
+                    );
+
+                    // If a distant hit started the chase, slowly
+                    // reduce that extra allowance as the boss closes in.
+                    resumedChaseDistance = Mathf.Min(
+                        resumedChaseDistance,
+                        Mathf.Max(minimumLimit, Distance + 2f)
+                    );
+
+                    shouldReturn = Distance > resumedChaseDistance;
+                }
+                else
+                {
+                    // Normal combat still uses the original home limit.
+                    shouldReturn =
+                        Vector3.Distance(transform.position, home) > leashRadius ||
+                        Vector3.Distance(player.position, home) > leashRadius;
                 }
             }
 
-            if (agent.enabled)
+            // Finish the current attack before leaving.
+            if (CurrentState != State.Attack && shouldReturn)
             {
-                agent.SetDestination(player.position);
+                machine.Change(returnHome);
+                return false;
             }
+
+            // Keep the existing phase-change rules.
+            bool safe =
+                CurrentState == State.Chase ||
+                CurrentState == State.Circle ||
+                ((CurrentState == State.Recovery ||
+                  CurrentState == State.Fatigue) &&
+                 Time.time >= recoveryUntil);
+
+            if (requestedPhase > phaseIndex && safe)
+            {
+                machine.Change(transition);
+                return false;
+            }
+
+            return true;
         }
 
-        private void TickAttack()
+        private void EnterReturnHome()
         {
-            if (currentAttack == null)
+            fightingAfterReturn = false;
+            returningHome = true;
+
+            recognizedFor = 0f;
+            homeWaitUntil = -1f;
+            pathAt = 0f;
+
+            // Forget old healing/whiff observations.
+            healObservedAt = whiffObservedAt = float.NegativeInfinity;
+
+            Stop();
+
+            // Use the existing idle/walk/run animation.
+            ForceLocomotion();
+        }
+
+        private bool TryResumeCombat(bool hitByPlayer)
+        {
+            if (!returningHome || !TargetAlive || !OnMesh)
+                return false;
+
+            // Coming near requires the boss to see you.
+            // A real hit already tells it who attacked.
+            if (!hitByPlayer &&
+                (Distance > returnReengageDistance || !Visible()))
             {
-                EnterState(State.Chase);
+                return false;
+            }
+
+            float chaseLimit = Mathf.Max(
+                returnChaseDistance,
+                returnReengageDistance + 1f
+            );
+
+            // A distant hit must not immediately trigger another retreat.
+            resumedChaseDistance = hitByPlayer
+                ? Mathf.Max(chaseLimit, Distance + 2f)
+                : chaseLimit;
+
+            returningHome = false;
+            fightingAfterReturn = true;
+
+            homeWaitUntil = -1f;
+            recognizedFor = 0f;
+
+            lastSeen = player.position;
+            seenAt = Time.time;
+            pathAt = 0f;
+
+            // Let an existing stagger finish first.
+            if (CurrentState != State.Stagger)
+                machine.Change(approach);
+
+            return true;
+        }
+
+        private bool TickReturnHome()
+        {
+            if (TryResumeCombat(false))
+                return true;
+
+            if (!OnMesh)
+                return true;
+
+            bool stillWalking =
+                Vector3.Distance(transform.position, home) > homeArrivalDistance ||
+                agent.pathPending ||
+                (agent.hasPath &&
+                agent.remainingDistance > homeArrivalDistance);
+
+            if (stillWalking)
+            {
+                homeWaitUntil = -1f;
+
+                Move(home, returnHomeSpeed);
+
+                // Face along the route around obstacles.
+                Vector3 facingPoint =
+                    agent.hasPath && !agent.pathPending
+                        ? agent.steeringTarget
+                        : home;
+
+                Face(facingPoint, 180f);
+
+                return true;
+            }
+
+            // Home reached. Stop and wait briefly.
+            Stop();
+
+            if (homeWaitUntil < 0f)
+                homeWaitUntil = Time.time + homeWaitSeconds;
+
+            if (Time.time >= homeWaitUntil)
+            {
+                returningHome = false;
+                recognizedFor = 0f;
+
+                machine.Change(idle);
+            }
+
+            return true;
+        }
+
+        [ContextMenu("Debug Air Slash Selection")]
+        private void DebugAirSlashSelection()
+        {
+            if (!Application.isPlaying)
+            {
+                Debug.Log("Run this during Play mode.", this);
                 return;
             }
 
-            stateTimer += Time.deltaTime;
+            Debug.Log(
+                $"AIR SLASH CHECK | State: {CurrentState} | " +
+                $"Distance: {Distance:F1} | " +
+                $"Visible: {Visible()} | " +
+                $"Target alive: {TargetAlive} | " +
+                $"Fatigue: {fatigue:F1}/{fatigueThreshold:F1}",
+                this);
 
-            if (player != null)
+            foreach (CaptainAttack a in attacks)
             {
-                FaceTowards(player.position);
-            }
-
-            switch (attackSubPhase)
-            {
-                case AttackSubPhase.Windup:
-
-                    if (stateTimer >=
-                        currentAttack.windupTime)
-                    {
-                        DoAttackImpact();
-                    }
-
-                    break;
-
-                case AttackSubPhase.Impact:
-
-                    attackSubPhase =
-                        AttackSubPhase.Recovery;
-
-                    break;
-
-                case AttackSubPhase.Recovery:
-
-                    if (stateTimer >=
-                        currentAttack.windupTime +
-                        currentAttack.recoveryTime)
-                    {
-                        FinishAttack();
-                    }
-
-                    break;
-            }
-        }
-
-        private void TickPhaseTransition()
-        {
-            stateTimer += Time.deltaTime;
-
-            if (stateTimer >= phaseTransitionDuration)
-            {
-                EnterState(State.Chase);
-            }
-        }
-
-        private void TickStagger()
-        {
-            stateTimer += Time.deltaTime;
-
-            if (stateTimer >= hitStaggerTime)
-            {
-                if (player != null)
-                    EnterState(State.Chase);
-                else
-                    EnterState(State.Idle);
-            }
-        }
-
-        // ================================================================
-        // Attacks
-        // ================================================================
-
-        private BossAttack PickAttack()
-        {
-            if (CurrentPhase == null ||
-                CurrentPhase.attacks == null ||
-                CurrentPhase.attacks.Length == 0)
-            {
-                return null;
-            }
-
-            BossAttack[] attacks =
-                CurrentPhase.attacks;
-
-            float totalWeight = 0f;
-
-            foreach (BossAttack attack in attacks)
-            {
-                if (attack != null)
-                    totalWeight += Mathf.Max(
-                        0f,
-                        attack.weight
-                    );
-            }
-
-            if (totalWeight <= 0f)
-            {
-                return attacks[0];
-            }
-
-            float roll =
-                Random.Range(0f, totalWeight);
-
-            float cumulative = 0f;
-
-            foreach (BossAttack attack in attacks)
-            {
-                if (attack == null)
+                if (a == null)
                     continue;
 
-                cumulative +=
-                    Mathf.Max(0f, attack.weight);
+                float facing = player != null
+                    ? Vector3.Angle(
+                        transform.forward,
+                        Flat(player.position - transform.position))
+                    : -1f;
 
-                if (roll <= cumulative)
-                    return attack;
+                float cooldownLeft = readyAt.TryGetValue(a, out float readyTime)
+                    ? Mathf.Max(0f, readyTime - Time.time)
+                    : 0f;
+
+                Debug.Log(
+                    $"Attack: {a.name}\n" +
+                    $"Projectile enabled: {a.isProjectileAttack}\n" +
+                    $"Prefab assigned: {a.projectilePrefab != null}\n" +
+                    $"Range: {a.minRange} to {a.maxRange}\n" +
+                    $"Facing: {facing:F1}, allowed: {a.maxFacingAngle}\n" +
+                    $"Phase weights: {a.phase1Weight}, {a.phase2Weight}\n" +
+                    $"Cooldown remaining: {cooldownLeft:F1}\n" +
+                    $"Eligible: {Eligible(a)}",
+                    this);
             }
-
-            return attacks[attacks.Length - 1];
         }
 
-        private float GetMaxAttackRange()
+        private bool TickApproach()
         {
-            if (CurrentPhase == null ||
-                CurrentPhase.attacks == null ||
-                CurrentPhase.attacks.Length == 0)
-            {
-                return 2f;
-            }
+            Face(lastSeen, 240f);
 
-            float max = 0f;
-
-            foreach (BossAttack attack
-                in CurrentPhase.attacks)
+            if (Time.time >= nextRangedDecisionAt &&
+                fatigue < fatigueThreshold &&
+                Visible())
             {
-                if (attack != null &&
-                    attack.range > max)
+                nextRangedDecisionAt = Time.time + 0.35f;
+
+                CaptainAttack ranged =
+                    SelectAttack(projectileOnly: true);
+
+                if (ranged != null)
                 {
-                    max = attack.range;
+                    StartAttack(ranged, false);
+                    return true;
                 }
             }
 
-            return max > 0f ? max : 2f;
+            Move(lastSeen, chaseSpeed * CurrentPhase.speedMultiplier);
+
+            if (Distance <= preferredDistance + 0.6f && Visible())
+                machine.Change(circle);
+
+            return true;
+        }
+        private bool TickCircle()
+        {
+            if (player == null) return true;
+            CircleMovement();
+            if (Time.time < decisionAt) return true;
+            decisionAt = Time.time + Random.Range(0.3f, 0.5f);
+            if (fatigue >= fatigueThreshold) { machine.Change(rest); return true; }
+            bool observedWhiff =
+            Time.time >= whiffReactAt &&
+            Time.time - whiffObservedAt < 1.5f;
+
+            bool canConsiderTaunt =
+                observedWhiff &&
+                Time.time >= tauntReadyAt &&
+                Distance <= noticeMissDistance &&
+                Visible() &&
+                ValidateAction(tauntAnimation);
+
+            if (canConsiderTaunt)
+            {
+                // Give this miss one chance to cause a taunt.
+                whiffObservedAt = float.NegativeInfinity;
+
+                float chance = arrogance *
+                    (phaseIndex == 0 ? 0.6f : 0.15f);
+
+                if (testTauntOnMiss || Random.value < chance)
+                {
+                    machine.Change(taunt);
+                    return true;
+                }
+            }
+            CaptainAttack selected = SelectAttack();
+            if (selected != null) StartAttack(selected, false);
+            else if (Distance > preferredDistance + 0.8f) machine.Change(approach);
+            return true;
         }
 
-        private void DoAttackImpact()
+        private void CircleMovement()
         {
-            attackSubPhase =
-                AttackSubPhase.Impact;
+            Face(lastSeen, 150f);
+            Vector3 away = transform.position - lastSeen; away.y = 0f;
+            if (away.sqrMagnitude < 0.01f) away = -transform.forward;
+            away.Normalize();
+            Vector3 tangent = Vector3.Cross(Vector3.up, away) * circleSign;
+            Vector3 destination = lastSeen + away * preferredDistance + tangent * 0.65f;
+            Move(destination, walkSpeed * CurrentPhase.speedMultiplier);
+        }
 
-            if (player == null ||
-                playerHealth == null ||
-                currentAttack == null)
+        private CaptainAttack SelectAttack(bool projectileOnly = false)
+        {
+            if (!TargetAlive || !Visible()) return null;
+            candidates.Clear(); scores.Clear(); float total = 0f;
+            foreach (CaptainAttack a in attacks)
+            {
+                if (!Eligible(a)) continue;
+                if (projectileOnly && !a.isProjectileAttack)
+                    continue;
+                float score = phaseIndex == 0 ? a.phase1Weight : a.phase2Weight;
+                if (a == lastAttack) score *= 0.2f; // Soft novelty bias, not forced random alternation.
+                if (a.punishHealing && Time.time >= healReactAt && Time.time - healObservedAt < 1.5f) score *= 3f;
+                score *= Mathf.Lerp(1f, 0.4f, Mathf.Clamp01(fatigue / fatigueThreshold));
+                if (score <= 0f) continue;
+                candidates.Add(a); scores.Add(score); total += score;
+            }
+            if (total <= 0f) return null;
+            float roll = Random.value * total;
+            for (int i = 0; i < candidates.Count; i++) { roll -= scores[i]; if (roll <= 0f) return candidates[i]; }
+            return candidates[candidates.Count - 1];
+        }
+        private bool Eligible(CaptainAttack a)
+        {
+            if (a == null || !TargetAlive) return false;
+            if (a.isProjectileAttack && a.projectilePrefab == null)
+                return false;
+            float weight = phaseIndex == 0 ? a.phase1Weight : a.phase2Weight;
+            return weight > 0f && Distance >= a.minRange && Distance <= a.maxRange &&
+                Vector3.Angle(transform.forward, Flat(player.position - transform.position)) <= a.maxFacingAngle &&
+                (!readyAt.TryGetValue(a, out float t) || Time.time >= t);
+        }
+        private void StartAttack(CaptainAttack a, bool continuation)
+        {
+            // Extensions have their own authored tell. Never restart the same state in a blend.
+            CancelAction();
+            currentAttack = a; queuedChain = null; chainDecided = false;
+            projectileFired = false;
+            projectileQueued = false;
+            if (!continuation) extensions = 0;
+            machine.Change(attack); Stop();
+            committed = false; parryWindow = false;
+            attackStepOpen = false;
+            attackStepRemaining = a.attackStepDistance;
+            lastAttack = a; readyAt[a] = Time.time + a.cooldown;
+            fatigue += a.fatigueCost; // Spend on attempt, including whiffs and interruptions.
+            fatigueOwed |= fatigue >= fatigueThreshold; // Recovery decay cannot erase an earned rest.
+            BeginAnimation(a.trigger, a.fullStateName, a.watchdogSeconds);
+            if (OnMesh && (a.useRootMotion || a.attackStepDistance > 0f)) if (OnMesh &&
+                (a.jumpSlam || a.useRootMotion || a.attackStepDistance > 0f))
+            {
+                agent.updatePosition = false;
+                agent.nextPosition = transform.position;
+            }
+        }
+        private bool TickAttack()
+        {
+            bool animationReady =
+                currentAttack != null &&
+                expectedHash != 0 &&
+                enteredHash == expectedHash &&
+                !stateExited;
+
+            if (animationReady && animator.speed > 0f)
+            {
+                // Turn during preparation, then hold direction for the swing.
+                if (!committed && TargetAlive && Visible())
+                {
+                    Face(lastSeen, currentAttack.trackingDegreesPerSecond);
+                }
+
+                TickAttackStep();
+            }
+
+            return TickAction();
+        }
+
+        private Vector3 JumpPosition(float t)
+        {
+            Vector3 position = Vector3.Lerp(jumpStart, jumpEnd, t);
+
+            // Starts at ground level, reaches jumpHeight, then returns to ground.
+            position.y +=
+                4f * currentAttack.jumpHeight * t * (1f - t);
+
+            return position;
+        }
+
+        private bool JumpPathClear()
+        {
+            float radius = Mathf.Max(0.05f, agent.radius * 0.9f);
+            float height = Mathf.Max(agent.height, radius * 2f);
+
+            Vector3 previous = JumpPosition(0f);
+
+            // Check the boss's body along the planned jump.
+            for (int i = 1; i <= 20; i++)
+            {
+                Vector3 next = JumpPosition(i / 20f);
+
+                Vector3 bottom =
+                    previous + Vector3.up * (radius + 0.06f);
+
+                Vector3 top =
+                    previous + Vector3.up * (height - radius + 0.06f);
+
+                Vector3 delta = next - previous;
+
+                if (Physics.CheckCapsule(
+                        bottom, top, radius, environment,
+                        QueryTriggerInteraction.Ignore))
+                {
+                    return false;
+                }
+
+                if (delta.sqrMagnitude > 0.000001f &&
+                    Physics.CapsuleCast(
+                        bottom, top, radius, delta.normalized,
+                        out _, delta.magnitude, environment,
+                        QueryTriggerInteraction.Ignore))
+                {
+                    return false;
+                }
+
+                previous = next;
+            }
+
+            Vector3 endBottom =
+                jumpEnd + Vector3.up * (radius + 0.06f);
+
+            Vector3 endTop =
+                jumpEnd + Vector3.up * (height - radius + 0.06f);
+
+            return !Physics.CheckCapsule(
+                endBottom, endTop, radius, environment,
+                QueryTriggerInteraction.Ignore);
+        }
+
+        public float GetJumpLandingCorrectionWeight(float blendWindow)
+        {
+            if (CurrentState != State.Attack ||
+                currentAttack == null ||
+                !currentAttack.jumpSlam ||
+                !jumpStarted ||
+                stateExited)
+            {
+                return 0f;
+            }
+
+            AnimatorStateInfo info =
+                animator.GetCurrentAnimatorStateInfo(0);
+
+            if (info.fullPathHash != expectedHash &&
+                animator.IsInTransition(0))
+            {
+                info = animator.GetNextAnimatorStateInfo(0);
+            }
+
+            if (info.fullPathHash != expectedHash)
+                return 0f;
+
+            float landingTime = currentAttack.jumpLandNormalized;
+
+            float correctionStart = Mathf.Max(
+                jumpStartNormalized,
+                landingTime - Mathf.Max(0.01f, blendWindow));
+
+            float progress = Mathf.InverseLerp(
+                correctionStart,
+                landingTime,
+                info.normalizedTime);
+
+            return Mathf.SmoothStep(0f, 1f, progress);
+        }
+
+        public void BeginJump(float normalizedTime)
+        {
+            if (CurrentState != State.Attack ||
+                currentAttack == null ||
+                !currentAttack.jumpSlam ||
+                jumpStarted ||
+                !TargetAlive ||
+                !OnMesh)
             {
                 return;
             }
 
-            float distance =
-                Vector3.Distance(
-                    transform.position,
-                    player.position
-                );
+            if (currentAttack.jumpLandNormalized <= normalizedTime + 0.03f)
+            {
+                Debug.LogWarning(
+                    "Jump landing time must be after takeoff.", this);
+                return;
+            }
+
+            var filter = new NavMeshQueryFilter
+            {
+                agentTypeID = agent.agentTypeID,
+                areaMask = agent.areaMask
+            };
+
+            jumpStart = transform.position;
 
             Vector3 toPlayer =
-                player.position -
-                transform.position;
+                Flat(player.position - jumpStart);
 
-            toPlayer.y = 0f;
-
-            if (toPlayer.sqrMagnitude <= 0.001f)
-                return;
-
-            toPlayer.Normalize();
-
-            bool inFront =
-                Vector3.Angle(
-                    transform.forward,
-                    toPlayer
-                ) < 80f;
-
-            if (distance <=
-                    currentAttack.range * 1.2f &&
-                inFront)
-            {
-                playerHealth.TakeDamage(
-                    new DamageInfo(
-                        currentAttack.damage,
-                        gameObject,
-                        player.position
-                    )
-                );
-            }
-        }
-
-        private void FinishAttack()
-        {
-            if (CurrentPhase != null)
-            {
-                attackCooldownTimer =
-                    CurrentPhase.attackCooldown;
-            }
-
-            attackSubPhase =
-                AttackSubPhase.None;
-
-            EnterState(State.Chase);
-        }
-
-        // ================================================================
-        // Parry
-        // ================================================================
-
-        /// <summary>
-        /// Called by the player's parry system.
-        /// </summary>
-        public void OnParried()
-        {
-            if (CurrentState != State.Attack)
-                return;
-
-            if (!IsInParryWindow)
-                return;
-
-            if (CurrentPhase != null)
-            {
-                attackCooldownTimer =
-                    CurrentPhase.attackCooldown;
-            }
-
-            EnterState(State.Stagger);
-        }
-
-        // ================================================================
-        // Damage / Phases
-        // ================================================================
-
-        private void HandleDamaged(DamageInfo info)
-        {
-            if (CurrentState == State.Dead)
-                return;
-
-            CheckPhaseTransition();
-
-            poiseRegenTimer = poiseRegenDelay;
-
-            if (CurrentState == State.Attack && IsInParryWindow)
-            {
-                SetTrigger(HitParam);
-                EnterState(State.Stagger);
-                currentPoise = maxPoise;
-                return;
-            }
-
-            currentPoise -= info.Amount;
-            if (currentPoise <= 0f)
-            {
-                SetTrigger(HitParam);
-                EnterState(State.Stagger);
-                currentPoise = maxPoise;
-            }
-        }
-
-        private void CheckPhaseTransition()
-        {
-            if (health == null ||
-                phases == null ||
-                phases.Length == 0)
-            {
-                return;
-            }
-
-            float healthPercentage =
-                health.CurrentHealth /
+            float distance = Mathf.Min(
+                currentAttack.jumpMaxDistance,
                 Mathf.Max(
-                    health.MaxHealth,
-                    0.01f
-                );
+                    0f,
+                    toPlayer.magnitude - currentAttack.attackStopDistance));
 
-            // Check phases from the next phase onward.
-            for (
-                int i = currentPhaseIndex + 1;
-                i < phases.Length;
-                i++
-            )
+            Vector3 desired =
+                jumpStart + toPlayer.normalized * distance;
+
+            // Keep this first version on connected, roughly level arena ground.
+            if (!NavMesh.SamplePosition(
+                    desired, out NavMeshHit landing, 0.4f, filter) ||
+                Mathf.Abs(landing.position.y - jumpStart.y) > 0.6f ||
+                NavMesh.Raycast(
+                    jumpStart, landing.position, out _, filter))
             {
-                if (phases[i] == null)
-                    continue;
+                Debug.LogWarning(
+                    "Jump skipped: no safe landing route.", this);
+                return;
+            }
 
-                if (healthPercentage <=
-                    phases[i].healthThreshold)
+            jumpEnd = landing.position;
+
+            if (!JumpPathClear())
+            {
+                Debug.LogWarning(
+                    "Jump skipped: wall, ceiling, or obstacle in jump path.",
+                    this);
+                return;
+            }
+            // Aim from the planned landing point toward the player's
+            // position at takeoff. Keep this direction during flight.
+            Vector3 strikeDirection =
+                Flat(player.position - jumpEnd);
+
+            if (strikeDirection.sqrMagnitude < 0.0001f)
+                strikeDirection = toPlayer;
+
+            if (strikeDirection.sqrMagnitude > 0.0001f)
+            {
+                Quaternion targetRotation =
+                    Quaternion.LookRotation(strikeDirection.normalized);
+
+                Quaternion strikeOffset = Quaternion.AngleAxis(
+                    currentAttack.jumpFacingOffsetDegrees,
+                    Vector3.up);
+
+                transform.rotation = strikeOffset * targetRotation;
+            }
+
+            CloseHitbox();
+            attackStepOpen = false;
+            parryWindow = false;
+
+            jumpStartNormalized = normalizedTime;
+            jumpStarted = jumpActive = true;
+            Debug.Log(
+            $"SCRIPTED JUMP STARTED | " +
+            $"Asset: {currentAttack.name} | " +
+            $"Height: {currentAttack.jumpHeight} | " +
+            $"Start Y: {jumpStart.y:F2} | " +
+            $"Landing Y: {jumpEnd.y:F2}",
+            this);
+            jumpLanded = false;
+
+            Stop();
+
+            // Keep the navigation position on the ground during flight.
+            agent.updatePosition = false;
+            agent.nextPosition = jumpStart;
+
+            CommitAttack();
+        }
+
+        private void TickJumpMotion()
+        {
+            AnimatorStateInfo info =
+                animator.GetCurrentAnimatorStateInfo(0);
+
+            if (info.fullPathHash != expectedHash &&
+                animator.IsInTransition(0))
+            {
+                info = animator.GetNextAnimatorStateInfo(0);
+            }
+
+            if (info.fullPathHash != expectedHash)
+                return;
+
+            float t = Mathf.InverseLerp(
+                jumpStartNormalized,
+                currentAttack.jumpLandNormalized,
+                info.normalizedTime);
+
+            transform.position = JumpPosition(t);
+        }
+
+        public void LandJump()
+        {
+            if (CurrentState != State.Attack || !jumpActive)
+                return;
+
+            jumpActive = false;
+
+            transform.position = jumpEnd;
+            agent.nextPosition = jumpEnd;
+            agent.updatePosition = true;
+
+            jumpLanded = true;
+
+            // A stagger earned during flight happens after landing.
+            if (poise <= 0f)
+            {
+                machine.Change(stagger);
+                return;
+            }
+
+            OpenHitbox();
+        }
+
+        private void CancelJump()
+        {
+            if (jumpActive)
+            {
+                Vector3 position = transform.position;
+
+                float horizontalLength =
+                    Flat(jumpEnd - jumpStart).magnitude;
+
+                float t = horizontalLength > 0.001f
+                    ? Mathf.Clamp01(
+                        Flat(position - jumpStart).magnitude /
+                        horizontalLength)
+                    : 0f;
+
+                // Search near the ground below the jump, not its airborne height.
+                position.y = Mathf.Lerp(jumpStart.y, jumpEnd.y, t);
+
+                var filter = new NavMeshQueryFilter
                 {
-                    currentPhaseIndex = i;
+                    agentTypeID = agent.agentTypeID,
+                    areaMask = agent.areaMask
+                };
 
-                    EnterState(
-                        State.PhaseTransition
-                    );
+                transform.position = NavMesh.SamplePosition(
+                    position, out NavMeshHit ground, 0.5f, filter)
+                    ? ground.position
+                    : jumpStart;
+            }
 
+            jumpActive = jumpStarted = jumpLanded = false;
+        }
+
+        private void TickAttackStep()
+        {
+            if (currentAttack != null && currentAttack.jumpSlam)
+                return;
+
+            if (!attackStepOpen ||
+                currentAttack == null ||
+                currentAttack.useRootMotion ||
+                !OnMesh ||
+                !TargetAlive ||
+                attackStepRemaining <= 0f)
+            {
+                return;
+            }
+
+            float dt = Time.deltaTime * Mathf.Max(0f, animator.speed);
+
+            float step = Mathf.Min(
+                currentAttack.attackStepSpeed * dt,
+                attackStepRemaining);
+
+            // Avoid stepping too close to, or through, the player.
+            float playerDistance =
+                Flat(player.position - transform.position).magnitude;
+
+            float availableSpace = Mathf.Max(
+                0f,
+                playerDistance - currentAttack.attackStopDistance);
+
+            step = Mathf.Min(step, availableSpace);
+
+            if (step <= 0.0001f)
+                return;
+
+            Vector3 start = transform.position;
+            Vector3 forward = Flat(transform.forward).normalized;
+            Vector3 desired = start + forward * step;
+
+            // Find nearby ground, then check that the path stays on the NavMesh.
+            if (!NavMesh.SamplePosition(
+                    desired, out NavMeshHit ground, 0.15f, agent.areaMask))
+            {
+                return;
+            }
+
+            desired = ground.position;
+
+            if (NavMesh.Raycast(
+                    start, desired, out NavMeshHit edge, agent.areaMask))
+            {
+                desired = edge.position;
+            }
+
+            float moved = Flat(desired - start).magnitude;
+
+            if (moved <= 0.0001f)
+                return;
+
+            transform.position = desired;
+            agent.nextPosition = desired;
+
+            attackStepRemaining =
+                Mathf.Max(0f, attackStepRemaining - moved);
+        }
+
+        private bool TickAction()
+        {
+            // Advance by Animator speed so local animator hit-stop does not consume the budget.
+            actionAge += Time.deltaTime * Mathf.Max(0f, animator.speed);
+
+            if (stateExited)
+            {
+                // Authored completion: animation finished normally via AnimationStateExited
+                CompleteAction(true);
+            }
+            else if (actionAge >= actionTimeout)
+            {
+                // Fault recovery: animation got stuck, state name mismatch, or relay failed
+                Debug.LogWarning($"Boss action contract failed in {CurrentState}. Closed weapon and returned safely.", this);
+                queuedChain = null;
+                CompleteAction(false);
+            }
+
+            return true;
+        }
+        private void BeginAnimation(string trigger, string fullPath, float watchdog)
+        {
+            expectedHash = Animator.StringToHash(fullPath); enteredHash = 0;
+            actionAge = 0f; actionTimeout = Mathf.Max(0.2f, watchdog); stateExited = false;
+            Trigger(trigger);
+        }
+        private void Trigger(string parameter)
+        {
+            int hash = Animator.StringToHash(parameter ?? "");
+            if (!triggers.Contains(hash)) { Debug.LogWarning($"Missing boss trigger '{parameter}'.", this); return; }
+            // Clear stale requests before committing a new action (especially Hit vs Roar).
+            foreach (int t in triggers) animator.ResetTrigger(t);
+            animator.SetTrigger(hash);
+        }
+        public void AnimationStateEntered(int hash) { if (hash == expectedHash) enteredHash = hash; }
+        public void AnimationStateExited(int hash)
+        {
+            if (hash == expectedHash && enteredHash == hash) { CloseHitbox(); stateExited = true; }
+        }
+        public bool AcceptAnimationEvent(int hash)
+        {
+            return isActiveAndEnabled && CurrentState != State.Dead && expectedHash != 0 &&
+                hash == expectedHash && enteredHash == hash && !stateExited;
+        }
+        public void PrepareStrike()
+        {
+            if (jumpStarted)
+                return;
+
+            if (CurrentState != State.Attack || currentAttack == null)
+                return;
+
+            // The previous strike must stop dealing damage before aiming again.
+            CloseHitbox();
+            parryWindow = false;
+
+            committed = false;
+            attackStepOpen = false;
+            attackStepRemaining = currentAttack.attackStepDistance;
+        }
+
+        public void SetAttackStep(bool open)
+        {
+            if (CurrentState != State.Attack || currentAttack == null)
+                return;
+
+            attackStepOpen = open && !currentAttack.useRootMotion;
+        }
+
+        public void CommitAttack()
+        {
+            if (CurrentState != State.Attack || committed) return;
+            committed = true; onCommittedAttack.Invoke();
+        }
+        private Quaternion GetAirSlashRotation(Vector3 direction)
+        {
+            Vector3 bladeAxis = projectileSpawnPoint.up;
+
+            if (airSlashBladeBase != null && airSlashBladeTip != null)
+            {
+                bladeAxis =
+                    airSlashBladeTip.position -
+                    airSlashBladeBase.position;
+            }
+
+            // Keep the blade's visible angle across the travel direction.
+            Vector3 slashUp =
+                Vector3.ProjectOnPlane(bladeAxis, direction);
+
+            // If the blade points directly along the shot,
+            // use the spawn point's orientation instead.
+            if (slashUp.sqrMagnitude < 0.0001f)
+            {
+                slashUp = Vector3.ProjectOnPlane(
+                    projectileSpawnPoint.up,
+                    direction);
+            }
+
+            if (slashUp.sqrMagnitude < 0.0001f)
+                slashUp = Vector3.ProjectOnPlane(Vector3.up, direction);
+
+            if (slashUp.sqrMagnitude < 0.0001f)
+                slashUp = Vector3.ProjectOnPlane(Vector3.right, direction);
+
+            Quaternion rotation =
+                Quaternion.LookRotation(direction, slashUp.normalized);
+
+            return rotation * Quaternion.AngleAxis(
+                currentAttack.projectileRollOffsetDegrees,
+                Vector3.forward);
+        }
+        public void QueueAirSlash()
+        {
+            if (CurrentState != State.Attack ||
+                currentAttack == null ||
+                !currentAttack.isProjectileAttack ||
+                projectileQueued ||
+                projectileFired ||
+                !TargetAlive)
+            {
+                return;
+            }
+
+            if (projectileSpawnPoint == null ||
+                currentAttack.projectilePrefab == null)
+            {
+                Debug.LogWarning(
+                    "Air slash needs a spawn point and projectile prefab.",
+                    this);
+                return;
+            }
+
+            // Remember the target position at the release event.
+            queuedProjectileAim =
+                player.position +
+                Vector3.up * currentAttack.projectileAimHeight;
+
+            queuedProjectileStateHash = expectedHash;
+            projectileQueued = true;
+
+            CommitAttack();
+        }
+
+        private void LateUpdate()
+        {
+            if (!projectileQueued)
+                return;
+
+            projectileQueued = false;
+
+            if (CurrentState != State.Attack ||
+                currentAttack == null ||
+                !currentAttack.isProjectileAttack ||
+                projectileFired ||
+                expectedHash != queuedProjectileStateHash ||
+                enteredHash != expectedHash ||
+                stateExited ||
+                !TargetAlive)
+            {
+                return;
+            }
+
+            projectileFired = true;
+
+            Vector3 spawnPosition = projectileSpawnPoint.position;
+
+            // Prevent releasing the projectile through a nearby wall.
+            Vector3 bodyPoint = new Vector3(
+                transform.position.x,
+                spawnPosition.y,
+                transform.position.z);
+
+            if (Physics.Linecast(
+                    bodyPoint,
+                    spawnPosition,
+                    environment,
+                    QueryTriggerInteraction.Ignore))
+            {
+                return;
+            }
+
+            Vector3 direction = queuedProjectileAim - spawnPosition;
+
+            if (direction.sqrMagnitude < 0.0001f)
+                return;
+
+            direction.Normalize();
+
+            Vector2 range = currentAttack.projectileSpeedRange;
+
+            float minimum = Mathf.Max(
+                0.1f,
+                Mathf.Min(range.x, range.y));
+
+            float maximum = Mathf.Max(
+                minimum,
+                Mathf.Max(range.x, range.y));
+
+            float speed = Random.Range(minimum, maximum);
+
+            SwordAirSlashProjectile projectile = Instantiate(
+                currentAttack.projectilePrefab,
+                spawnPosition,
+                GetAirSlashRotation(direction));
+
+            projectile.Launch(
+                gameObject,
+                direction,
+                speed,
+                currentAttack.damage,
+                currentAttack.hitReaction,
+                currentAttack.hitReactionMode);
+        }
+        public void OpenHitbox()
+        {
+            if (currentAttack != null && currentAttack.isProjectileAttack)
+                return;
+            if (currentAttack != null &&
+            currentAttack.jumpSlam &&
+            !jumpLanded)
+            {
+                return;
+            }
+            if (CurrentState != State.Attack || currentAttack == null) return;
+            CommitAttack(); // Missing commit event still cannot enable perfect active-frame tracking.
+            weapon.Open(
+            gameObject,
+            currentAttack.damage,
+            currentAttack.hitReaction,
+            currentAttack.hitReactionMode);
+        }
+        public void CloseHitbox() { if (weapon != null) weapon.Close(); }
+        public void SetParryWindow(bool open)
+        {
+            parryWindow = open && CurrentState == State.Attack && currentAttack != null && currentAttack.parryable;
+        }
+        public void DecideChain()
+        {
+            if (CurrentState != State.Attack || chainDecided || currentAttack == null) return;
+            chainDecided = true;
+            CaptainAttack next = currentAttack.followup;
+            float chance = phaseIndex == 0 ? currentAttack.phase1ChainChance : currentAttack.phase2ChainChance;
+            if (requestedPhase == phaseIndex && extensions < CurrentPhase.maxExtensions &&
+                fatigue < fatigueThreshold && next != null && Eligible(next) && Visible() && Random.value < chance)
+                queuedChain = next;
+        }
+        public void CompleteAction() { CompleteAction(true); }
+        private void CompleteAction(bool authored)
+        {
+            State finished = CurrentState;
+            if (finished == State.Attack &&
+            currentAttack.jumpSlam &&
+            !jumpLanded)
+            {
+                authored = false;
+            }
+            if (finished == State.Attack)
+            {
+                float recovery = Mathf.Max(CurrentPhase.minimumRecovery, currentAttack.guaranteedRecovery);
+                CaptainAttack next = authored ? queuedChain : null;
+                CloseHitbox(); parryWindow = false;
+                // Recheck eligibility at launch: the player may have escaped after decision.
+                if (next != null && requestedPhase == phaseIndex && Eligible(next) && Visible())
+                { extensions++; StartAttack(next, true); return; }
+                recoveryUntil = Time.time + recovery; machine.Change(recover);
+            }
+            else if (finished == State.PhaseTransition)
+            {
+                phaseIndex = requestedPhase; // Stats change at completion, never halfway through the roar.
+                fatigue = 0f; fatigueOwed = false; poise = maxPoise;
+                recoveryUntil = Time.time + 0.7f; machine.Change(recover);
+                onPhaseTransitionFinished.Invoke();
+            }
+            else if (finished == State.Stagger || finished == State.Taunt)
+            {
+                if (finished == State.Stagger)
+                    poise = maxPoise;
+
+                // If a hit interrupted the walk home, continue afterward.
+                if (returningHome)
+                {
+                    machine.Change(returnHome);
                     return;
                 }
+
+                recoveryUntil = Time.time + 0.4f;
+                machine.Change(recover);
             }
         }
+        public void OnParried()
+        {
+            if (!IsInParryWindow || health.IsDead) return;
+            machine.Change(stagger); // Stagger's enter owns Hit trigger for every interruption source.
+        }
+        private void HandleDamaged(DamageInfo info)
+        {
+            if (!configured || health.IsDead || CurrentState == State.Dead) return;
+            float ratio = health.CurrentHealth / Mathf.Max(0.01f, health.MaxHealth);
+            // A large hit requests the deepest eligible phase; it cannot overwrite death.
+            for (int i = phaseIndex + 1; i < phases.Length; i++)
+                if (ratio <= phases[i].healthThreshold) requestedPhase = Mathf.Max(requestedPhase, i);
+            poiseDamagedAt = Time.time;
+            bool hitByPlayer =
+            player != null &&
+            info.Attacker != null &&
+            (info.Attacker.transform == player ||
+            info.Attacker.transform.IsChildOf(player));
 
+            if (returningHome && hitByPlayer)
+                TryResumeCombat(true);
+            // Transition is uninterruptible, but NOT invulnerable: Health still processes damage.
+            if (CurrentState == State.PhaseTransition || CurrentState == State.Stagger) return;
+            poise -= Mathf.Max(0f, info.Amount) * poiseDamageMultiplier;
+            if (poise <= 0f && !jumpActive)
+                machine.Change(stagger);
+        }
         private void HandleDeath()
         {
-            if (CurrentState == State.Dead)
+            if (machine == null || CurrentState == State.Dead)
                 return;
 
-            EnterState(State.Dead);
+            returningHome = false;
 
-            Destroy(gameObject, 6f);
+            CancelAction();
+            machine.Change(dead);
         }
-
-        // ================================================================
-        // Perception
-        // ================================================================
-
-        private void FindPlayer()
+        // Call ONLY when the player's visible healing animation starts, not on button press.
+        public void NotifyPlayerHealStarted()
         {
-            GameObject go =
-                GameObject.FindGameObjectWithTag(
-                    "Player"
-                );
-
-            if (go != null)
+            if (!configured || !machine.IsWithin(combat) || !TargetAlive || !Visible()) return;
+            healObservedAt = Time.time; healReactAt = Time.time + Random.Range(reactionDelay.x, reactionDelay.y);
+        }
+        // Call after a player's completed attack hit no valid enemy; this is an explicit sensor input.
+        public void NotifyPlayerWhiff()
+        {
+            if (!isActiveAndEnabled ||
+                !configured ||
+                health.IsDead ||
+                !machine.IsWithin(combat) ||
+                !TargetAlive ||
+                Distance > noticeMissDistance ||
+                !Visible())
             {
-                player = go.transform;
-                playerHealth =
-                    go.GetComponent<Health>();
-            }
-        }
-
-        // ================================================================
-        // Helpers
-        // ================================================================
-
-        private void FaceTowards(Vector3 worldPos)
-        {
-            Vector3 direction =
-                worldPos - transform.position;
-
-            direction.y = 0f;
-
-            if (direction.sqrMagnitude < 0.001f)
                 return;
-
-            Quaternion targetRotation =
-                Quaternion.LookRotation(direction);
-
-            transform.rotation =
-                Quaternion.Slerp(
-                    transform.rotation,
-                    targetRotation,
-                    8f * Time.deltaTime
-                );
-        }
-
-        private void SetTrigger(int hash)
-        {
-            if (animator != null)
-            {
-                animator.SetTrigger(hash);
             }
-        }
 
-        private void UpdateAnimator()
+            whiffObservedAt = Time.time;
+            whiffReactAt = Time.time +
+                Random.Range(reactionDelay.x, reactionDelay.y);
+        }
+        private bool Visible()
         {
-            if (animator == null)
+            return player != null && !Physics.Linecast(transform.position + Vector3.up * 1.5f,
+                player.position + Vector3.up, environment, QueryTriggerInteraction.Ignore);
+        }
+        private void Move(Vector3 destination, float speed)
+        {
+            if (!OnMesh) return;
+            agent.isStopped = false; agent.speed = speed; agent.stoppingDistance = 0.15f;
+            if (Time.time < pathAt) return;
+            pathAt = Time.time + 0.15f;
+            if (NavMesh.SamplePosition(destination, out NavMeshHit hit, 1f, agent.areaMask))
+                agent.SetDestination(hit.position);
+        }
+        private void Stop() { if (OnMesh) { agent.isStopped = true; agent.ResetPath(); } }
+        private static Vector3 Flat(Vector3 v) { v.y = 0f; return v; }
+        private void Face(Vector3 position, float degreesPerSecond)
+        {
+            Vector3 direction = Flat(position - transform.position);
+            if (direction.sqrMagnitude < 0.001f) return;
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(direction),
+                degreesPerSecond * Time.deltaTime);
+        }
+        public void ApplyRootMotion(Vector3 delta)
+        {
+            if (jumpActive)
+            {
+                TickJumpMotion();
                 return;
-
-            float velocity = 0f;
-
-            if (agent != null &&
-                agent.enabled)
-            {
-                velocity =
-                    agent.velocity.magnitude;
             }
 
-            float normalizedSpeed =
-                velocity /
-                Mathf.Max(
-                    baseChaseSpeed,
-                    0.01f
-                );
-
-            animator.SetFloat(
-                SpeedParam,
-                normalizedSpeed,
-                0.1f,
-                Time.deltaTime
-            );
+            if (CurrentState == State.Attack &&
+                currentAttack != null &&
+                currentAttack.jumpSlam)
+            {
+                return;
+            }
+            if (!configured || CurrentState != State.Attack || currentAttack == null ||
+                !currentAttack.useRootMotion || enteredHash != expectedHash || !OnMesh) return;
+            // This ground-based captain never leaps via root motion. No teleport over NavMesh holes.
+            Vector3 desired = transform.position + Flat(delta);
+            if (NavMesh.Raycast(transform.position, desired, out NavMeshHit edge, agent.areaMask)) desired = edge.position;
+            if (NavMesh.SamplePosition(desired, out NavMeshHit grounded, 0.3f, agent.areaMask))
+            { transform.position = grounded.position; agent.nextPosition = grounded.position; }
         }
-
-        // ================================================================
-        // Gizmos
-        // ================================================================
-
-        private void OnDrawGizmosSelected()
+        private void CancelAction()
         {
-            Gizmos.color = Color.magenta;
-
-            Gizmos.DrawWireSphere(
-                transform.position,
-                detectRadius
-            );
+            projectileQueued = false;
+            CancelJump();
+            attackStepOpen = false;
+            attackStepRemaining = 0f;
+            CloseHitbox(); parryWindow = false; expectedHash = enteredHash = 0;
+            stateExited = false; queuedChain = null;
+            if (OnMesh) { agent.nextPosition = transform.position; agent.updatePosition = true; }
+        }
+        private void ForceLocomotion()
+        {
+            if (animator == null) return;
+            foreach (int t in triggers) animator.ResetTrigger(t);
+            animator.CrossFadeInFixedTime(Animator.StringToHash(locomotionState), 0.15f, 0);
         }
     }
 }

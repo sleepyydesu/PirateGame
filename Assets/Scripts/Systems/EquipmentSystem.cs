@@ -6,6 +6,7 @@ public class EquipmentSystem : MonoBehaviour
 
     /// <summary>The DamageDealer on the spawned sword (used by quest upgrades).</summary>
     public DamageDealer WeaponDamageDealer => damageDealer;
+    public Transform WeaponRoot => weaponInstance != null ? weaponInstance.transform : null;
 
     [SerializeField] GameObject weaponHolder;
     [SerializeField] GameObject weaponPrefab;
@@ -93,6 +94,12 @@ public class EquipmentSystem : MonoBehaviour
         }
 
         weaponInstance.SetActive(true);
+    }
+
+    void OnDisable()
+    {
+        if (damageDealer != null) damageDealer.EndDealDamage();
+        StopTrail();
     }
 
     public void DrawWeapon()

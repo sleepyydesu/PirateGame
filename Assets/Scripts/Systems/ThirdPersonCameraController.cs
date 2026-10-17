@@ -31,7 +31,7 @@ public class ThirdPersonCameraController : MonoBehaviour
             return;
         }
 
-        playerInput.actions.Enable();
+        // PlayerInputReader owns action-map enable/disable. Camera only reads zoom.
 
         zoomAction = playerInput.actions.FindAction("MouseZoom");
         if (zoomAction == null)
@@ -66,6 +66,16 @@ public class ThirdPersonCameraController : MonoBehaviour
 
         currentZoom = Mathf.Lerp(currentZoom, targetZoom, Time.deltaTime * zoomLerpSpeed);
         orbital.Radius = currentZoom;
+    }
+
+    void OnEnable()
+    {
+        if (zoomAction != null) zoomAction.performed += HandleMouseScroll;
+    }
+
+    void OnDisable()
+    {
+        if (zoomAction != null) zoomAction.performed -= HandleMouseScroll;
     }
 
     void OnDestroy()

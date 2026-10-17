@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13b4916396bdc964c94d5a264a2f6498, type: 3}
+  m_Name: Captain_CourtesyCut
+  m_EditorClassIdentifier: Assembly-CSharp::PirateGame.Enemies.CaptainAttack
+  trigger: attack1
+  fullStateName: Base Layer.Boss_Attack
+  watchdogSeconds: 1.65
+  minRange: 0
+  maxRange: 2.5
+  maxFacingAngle: 180
+  phase1Weight: 3
+  phase2Weight: 2
+  cooldown: 1.5
+  damage: 15
+  fatigueCost: 15
+  guaranteedRecovery: 0.2
+  trackingDegreesPerSecond: 240
+  useRootMotion: 0
+  attackStepDistance: 0.7
+  attackStepSpeed: 2.5
+  attackStopDistance: 1.3
+  parryable: 1
+  punishHealing: 0
+  followup: {fileID: 11400000, guid: 7b71cd3a345fad8418b935711cd6ff7f, type: 2}
+  phase1ChainChance: 0.15
+  phase2ChainChance: 0.45

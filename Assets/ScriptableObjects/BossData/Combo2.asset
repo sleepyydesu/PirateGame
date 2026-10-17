@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13b4916396bdc964c94d5a264a2f6498, type: 3}
+  m_Name: Combo2
+  m_EditorClassIdentifier: Assembly-CSharp::PirateGame.Enemies.CaptainAttack
+  trigger: comboAttack2
+  fullStateName: Base Layer.Boss_ComboAttack2
+  watchdogSeconds: 4.5
+  minRange: 0.5
+  maxRange: 3
+  maxFacingAngle: 180
+  phase1Weight: 1
+  phase2Weight: 1
+  cooldown: 3
+  damage: 20
+  fatigueCost: 25
+  guaranteedRecovery: 0.2
+  trackingDegreesPerSecond: 240
+  hitReaction: 2
+  hitReactionMode: 0
+  useRootMotion: 0
+  jumpSlam: 0
+  jumpFacingOffsetDegrees: 0
+  jumpHeight: 1.8
+  jumpMaxDistance: 5
+  jumpLandNormalized: 0.65
+  attackStepDistance: 0.7
+  attackStepSpeed: 2.5
+  attackStopDistance: 1.3
+  parryable: 1
+  punishHealing: 0
+  followup: {fileID: 11400000, guid: 5f445714ee6a9a94dafdcdfb6a21995d, type: 2}
+  phase1ChainChance: 0.15
+  phase2ChainChance: 0.5
