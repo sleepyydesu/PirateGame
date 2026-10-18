@@ -63,21 +63,7 @@ ModelImporter:
         floatParameter: 0
         intParameter: 0
         messageOptions: 0
-      - time: 0.6419819
-        functionName: End
-        data: 
-        objectReferenceParameter: {fileID: 11500000, guid: 67f85990f6c3e13418364404eba9f97f, type: 3}
-        floatParameter: 0
-        intParameter: 0
-        messageOptions: 0
-      - time: 0.88205683
-        functionName: AE_ActionComplete
-        data: 
-        objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
-        floatParameter: 0
-        intParameter: 0
-        messageOptions: 0
-      - time: 0.23485048
+      - time: 0.23690178
         functionName: AE_FireProjectile
         data: 
         objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
@@ -93,6 +79,27 @@ ModelImporter:
         messageOptions: 0
       - time: 0.6250605
         functionName: AE_FireProjectile
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.6419819
+        functionName: End
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: 67f85990f6c3e13418364404eba9f97f, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.75755095
+        functionName: AE_ChainDecision
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.88205683
+        functionName: AE_ActionComplete
         data: 
         objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
         floatParameter: 0

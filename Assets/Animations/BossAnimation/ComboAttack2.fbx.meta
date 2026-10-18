@@ -82,14 +82,7 @@ ModelImporter:
         data: 
         objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
         floatParameter: 0
-        intParameter: 0
-        messageOptions: 0
-      - time: 0.6752122
-        functionName: AE_HitboxOff
-        data: 
-        objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
-        floatParameter: 0
-        intParameter: 0
+        intParameter: 1
         messageOptions: 0
       - time: 0.88205683
         functionName: AE_ActionComplete
@@ -124,7 +117,7 @@ ModelImporter:
         data: 
         objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
         floatParameter: 0
-        intParameter: 0
+        intParameter: 1
         messageOptions: 0
       - time: 0.6044234
         functionName: AE_HitboxOn
@@ -191,6 +184,20 @@ ModelImporter:
         messageOptions: 0
       - time: 0.6417798
         functionName: AE_AttackStepOff
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.61306584
+        functionName: AE_PrepareGroundBurst
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.64895946
+        functionName: AE_GroundBurst
         data: 
         objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
         floatParameter: 0

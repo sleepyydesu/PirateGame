@@ -75,12 +75,28 @@ namespace PirateGame.Enemies
                 boss.LandJump();
         }
         public void AE_Commit(AnimationEvent e) { if (Accept(e)) boss.CommitAttack(); }
-        public void AE_HitboxOn(AnimationEvent e) { if (Accept(e)) boss.OpenHitbox(); }
+        public void AE_HitboxOn(AnimationEvent e) { if (Accept(e)) boss.OpenHitbox(e.intParameter); }
         public void AE_HitboxOff(AnimationEvent e) { if (Accept(e)) boss.CloseHitbox(); }
         public void AE_ParryOn(AnimationEvent e) { if (Accept(e)) boss.SetParryWindow(true); }
         public void AE_ParryOff(AnimationEvent e) { if (Accept(e)) boss.SetParryWindow(false); }
         public void AE_ChainDecision(AnimationEvent e) { if (Accept(e)) boss.DecideChain(); }
         public void AE_ActionComplete(AnimationEvent e) { if (Accept(e)) boss.CompleteAction(); }
+        public void AE_GuardOn(AnimationEvent e)
+        {
+            if (Accept(e)) boss.SetDuelGuard(true);
+        }
+        public void AE_GuardOff(AnimationEvent e)
+        {
+            if (Accept(e)) boss.SetDuelGuard(false);
+        }
+        public void AE_BackstepMoveOn(AnimationEvent e)
+        {
+            if (Accept(e)) boss.SetDuelBackstepMovement(true);
+        }
+        public void AE_BackstepMoveOff(AnimationEvent e)
+        {
+            if (Accept(e)) boss.SetDuelBackstepMovement(false);
+        }
         private void Update()
         {
             RemoveLandingOffset();
@@ -240,6 +256,22 @@ namespace PirateGame.Enemies
         {
             if (boss != null) boss.ApplyRootMotion(animator.deltaPosition);
             // Root rotation is baked into pose. Code owns bounded facing before commitment.
+        }
+        public void AE_PrepareGroundBurst(AnimationEvent e)
+        {
+            if (Accept(e))
+                boss.PrepareGroundBurst();
+        }
+        public void AE_RoarBurst(AnimationEvent e)
+        {
+            if (Accept(e))
+                boss.RoarBurstFromAnimation();
+        }
+
+        public void AE_GroundBurst(AnimationEvent e)
+        {
+            if (Accept(e))
+                boss.GroundBurstFromAnimation();
         }
         public void AE_FireProjectile(AnimationEvent e)
         {

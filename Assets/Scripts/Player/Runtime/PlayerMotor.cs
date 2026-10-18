@@ -27,6 +27,13 @@ namespace PirateGame.PlayerV2
         private Vector3 normal = Vector3.up;
         private readonly Collider[] clearance = new Collider[32];
         private bool wasGrounded;
+        private Vector3 knockbackDirection;
+        private float knockbackDistance;
+        private float knockbackDuration;
+        private float knockbackElapsed;
+
+        public bool HasKnockback =>
+            knockbackElapsed < knockbackDuration;
         private void Awake()
         {
             capsule = GetComponent<CharacterController>(); originalHeight = capsule.height;
@@ -88,6 +95,57 @@ namespace PirateGame.PlayerV2
             }
             capsule.height = h; capsule.center = center; Crouched = crouch; return true;
         }
+        public void StopHorizontalMotion()
+        {
+            HorizontalVelocity = Vector3.zero;
+        }
+
+        public void ApplyKnockback(
+            Vector3 direction,
+            float distance,
+            float seconds)
+        {
+            direction.y = 0f;
+
+            if (!capsule.enabled ||
+                distance <= 0f ||
+                direction.sqrMagnitude < 0.0001f)
+            {
+                return;
+            }
+
+            knockbackDirection = direction.normalized;
+            knockbackDistance = distance;
+            knockbackDuration = Mathf.Max(0.05f, seconds);
+            knockbackElapsed = 0f;
+
+            StopHorizontalMotion();
+        }
+
+        private Vector3 ConsumeKnockback(float dt)
+        {
+            if (!HasKnockback)
+                return Vector3.zero;
+
+            float before = knockbackElapsed / knockbackDuration;
+
+            knockbackElapsed = Mathf.Min(
+                knockbackDuration,
+                knockbackElapsed + dt);
+
+            float after = knockbackElapsed / knockbackDuration;
+
+            // Fast at first, then slows to a stop.
+            float progressBefore =
+                1f - (1f - before) * (1f - before);
+
+            float progressAfter =
+                1f - (1f - after) * (1f - after);
+
+            return knockbackDirection *
+                   knockbackDistance *
+                   (progressAfter - progressBefore);
+        }
         // One persistent velocity. Action states choose policy, never reset gravity.
         public void Step(float dt, Vector2 input, bool sprint, float movementScale, bool rotate,
             bool scriptedMotion, Vector3 actionVelocity, bool rootTranslation)
@@ -96,7 +154,12 @@ namespace PirateGame.PlayerV2
             WishDirection = CameraDirection(input);
             float speed = Crouched ? crouchSpeed : sprint ? sprintSpeed : runSpeed;
             Vector3 desired = WishDirection * speed * movementScale;
-            if (scriptedMotion) HorizontalVelocity = actionVelocity;
+            bool pushed = HasKnockback;
+
+            if (pushed)
+                HorizontalVelocity = Vector3.zero;
+            else if (scriptedMotion)
+                HorizontalVelocity = actionVelocity;
             else if (rootTranslation) HorizontalVelocity = Vector3.zero;
             else HorizontalVelocity = Vector3.MoveTowards(HorizontalVelocity, desired,
                 (Grounded ? (desired.sqrMagnitude > 0.001f ? acceleration : deceleration) : airAcceleration) * dt);
@@ -106,9 +169,22 @@ namespace PirateGame.PlayerV2
             if (Grounded && VerticalSpeed < 0f) VerticalSpeed = -groundStickSpeed;
             else VerticalSpeed = Mathf.Max(VerticalSpeed + gravity * dt, -55f);
             capsule.stepOffset = Grounded ? originalStep : 0f;
-            CollisionFlags flags = capsule.Move((horizontal + Vector3.up * VerticalSpeed) * dt);
+            Vector3 push = ConsumeKnockback(dt);
+
+            if (Grounded && push.sqrMagnitude > 0.0001f)
+            {
+                push = Vector3.ProjectOnPlane(push, normal).normalized *
+                       push.magnitude;
+            }
+
+            CollisionFlags flags = capsule.Move(
+                (horizontal + Vector3.up * VerticalSpeed) * dt + push);
+
+            if (pushed && (flags & CollisionFlags.Sides) != 0)
+                knockbackElapsed = knockbackDuration;
             if ((flags & CollisionFlags.Above) != 0 && VerticalSpeed > 0f) VerticalSpeed = 0f;
-            if (rotate && WishDirection.sqrMagnitude > 0.001f) Face(WishDirection, turnRate, dt);
+            if (rotate && !pushed && WishDirection.sqrMagnitude > 0.001f)
+                Face(WishDirection, turnRate, dt);
         }
         public void Face(Vector3 direction, float degrees, float dt)
         {
@@ -121,6 +197,12 @@ namespace PirateGame.PlayerV2
             if (!capsule.enabled) return;
             delta.y = 0f; capsule.Move(delta); // Gravity already ran in Step; only authored horizontal delta is added.
         }
-        public void ResetMotion() { HorizontalVelocity = Vector3.zero; VerticalSpeed = 0f; lastGroundTime = float.NegativeInfinity; }
+        public void ResetMotion()
+        {
+            knockbackElapsed = knockbackDuration = 0f;
+            HorizontalVelocity = Vector3.zero;
+            VerticalSpeed = 0f;
+            lastGroundTime = float.NegativeInfinity;
+        }
     }
 }

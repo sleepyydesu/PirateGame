@@ -29,6 +29,16 @@ MonoBehaviour:
   hitReactionMode: 0
   useRootMotion: 0
   jumpSlam: 0
+  useGroundBurst: 1
+  comboBurstDamage: 15
+  comboBurstReaction: 4
+  comboBurstReactionMode: 0
+  groundBurstVfx: {fileID: 2321939456251348004, guid: 8b81df6afad302d429e8ed0dc689aa8b, type: 3}
+  groundBurstRadius: 3
+  groundBurstHeight: 1.2
+  knockbackDistance: 1
+  knockbackSeconds: 0.25
+  groundBurstVfxLifetime: 3
   jumpFacingOffsetDegrees: 0
   jumpHeight: 1.8
   jumpMaxDistance: 5
@@ -36,8 +46,27 @@ MonoBehaviour:
   attackStepDistance: 0.7
   attackStepSpeed: 2.5
   attackStopDistance: 1.3
+  isProjectileAttack: 0
+  projectilePrefab: {fileID: 0}
+  projectileSpeedRange: {x: 12, y: 18}
+  projectileRollOffsetDegrees: 0
+  projectileAimHeight: 1
   parryable: 1
   punishHealing: 0
   followup: {fileID: 11400000, guid: 5f445714ee6a9a94dafdcdfb6a21995d, type: 2}
-  phase1ChainChance: 0.15
-  phase2ChainChance: 0.5
+  phase1ChainChance: 0.9
+  phase2ChainChance: 0.9
+  meleePushDistance: 0
+  meleePushSeconds: 0.12
+  blockedMeleePushDistance: 0
+  blockedMeleePushSeconds: 0.12
+  meleeHitOverrides:
+  - overrideDamage: 0
+    damage: 0
+    overrideReaction: 0
+    reaction: 2
+    reactionMode: 0
+    pushDistance: 0.8
+    pushSeconds: 0.22
+    blockedPushDistance: 0.2
+    blockedPushSeconds: 0.15

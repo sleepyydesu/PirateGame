@@ -12,12 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a7bde7fa4eaeb784098fea6171bebd7c, type: 3}
   m_Name: LightCut2
   m_EditorClassIdentifier: Assembly-CSharp::PirateGame.PlayerV2.PlayerAttackDefinition
-  fullStatePath: Arms Layer.combat_attack2
-  layer: 2
+  fullStatePath: Combat Layer.combat_attack2
+  layer: 1
   damage: 22
-  movementScale: 0.46
+  hitReaction: 0
+  hitReactionMode: 0
+  movementScale: 0
   anticipationTurnRate: 540
   watchdogSeconds: 4
   recoverySeconds: 0.12
-  useRootTranslation: 0
-  followup: {fileID: 11400000, guid: b997946e7e007944fb1840f39328c368, type: 2}
+  useRootTranslation: 1
+  forceForwardRootMotion: 1
+  followup: {fileID: 0}
+  weightedFollowups: []
+  avoidSameFollowupTwice: 1

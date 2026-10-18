@@ -8,7 +8,8 @@ namespace PirateGame.Combat
         Default,
         Light,
         Heavy,
-        Thrust
+        Thrust,
+        GroundSlam
     }
 
     public enum HitReactionMode
@@ -24,6 +25,19 @@ namespace PirateGame.Combat
 
         [Tooltip("Example: Damage Layer.Player_HurtHeavy")]
         public string fullStatePath;
+        public bool fullBody;
+        [Header("Knockdown")]
+        public bool knockdown;
+
+        [Tooltip("Example: Base Layer.Player_GetUp")]
+        public string getUpStatePath = "Base Layer.Player_GetUp";
+
+        [Min(0f)]
+        public float downSeconds = 0.3f;
+
+        [Tooltip("Set slightly longer than the getting-up clip.")]
+        [Min(0.2f)]
+        public float getUpWatchdogSeconds = 3f;
 
         [Tooltip("Safety timeout if the completion event is missing.")]
         [Min(0.2f)]

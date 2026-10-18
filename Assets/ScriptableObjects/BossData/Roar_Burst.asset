@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13b4916396bdc964c94d5a264a2f6498, type: 3}
+  m_Name: Roar_Burst
+  m_EditorClassIdentifier: Assembly-CSharp::PirateGame.Enemies.CaptainAttack
+  trigger: roar
+  fullStateName: Base Layer.Boss_Roar
+  watchdogSeconds: 4
+  minRange: 0
+  maxRange: 2.5
+  maxFacingAngle: 65
+  phase1Weight: 1
+  phase2Weight: 1
+  cooldown: 3
+  damage: 5
+  fatigueCost: 25
+  guaranteedRecovery: 0.7
+  trackingDegreesPerSecond: 100
+  hitReaction: 4
+  hitReactionMode: 0
+  useRootMotion: 0
+  jumpSlam: 0
+  useGroundBurst: 1
+  comboBurstDamage: 15
+  comboBurstReaction: 4
+  comboBurstReactionMode: 0
+  groundBurstVfx: {fileID: 4994997792314849709, guid: 3dd50886582244645be87adb42aa8528, type: 3}
+  groundBurstRadius: 5
+  groundBurstHeight: 1.2
+  knockbackDistance: 5
+  knockbackSeconds: 0.35
+  groundBurstVfxLifetime: 3
+  jumpFacingOffsetDegrees: 0
+  jumpHeight: 1.8
+  jumpMaxDistance: 5
+  jumpLandNormalized: 0.65
+  attackStepDistance: 0.7
+  attackStepSpeed: 2.5
+  attackStopDistance: 1.3
+  isProjectileAttack: 0
+  projectilePrefab: {fileID: 0}
+  projectileSpeedRange: {x: 12, y: 18}
+  projectileRollOffsetDegrees: 0
+  projectileAimHeight: 1
+  parryable: 1
+  punishHealing: 0
+  followup: {fileID: 0}
+  phase1ChainChance: 0.15
+  phase2ChainChance: 0.45

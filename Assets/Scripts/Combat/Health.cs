@@ -9,6 +9,17 @@ namespace PirateGame.Combat
         public GameObject Attacker;
         public Vector3 HitPoint;
         public bool WasBlocked;
+        public bool HasImpactOrigin;
+        public Vector3 ImpactOrigin;
+
+        public Vector3 KnockbackDirection;
+        public float KnockbackDistance;
+        public float KnockbackSeconds;
+
+        // A sword hit can push less when blocked. False keeps old callers compatible.
+        public bool HasBlockedKnockback;
+        public float BlockedKnockbackDistance;
+        public float BlockedKnockbackSeconds;
 
         public HitReactionType Reaction;
         public HitReactionMode ReactionMode;
@@ -24,6 +35,15 @@ namespace PirateGame.Combat
             Attacker = attacker;
             HitPoint = hitPoint;
             WasBlocked = false;
+            HasImpactOrigin = false;
+            ImpactOrigin = Vector3.zero;
+
+            KnockbackDirection = Vector3.zero;
+            KnockbackDistance = 0f;
+            KnockbackSeconds = 0f;
+            HasBlockedKnockback = false;
+            BlockedKnockbackDistance = 0f;
+            BlockedKnockbackSeconds = 0f;
 
             Reaction = reaction;
             ReactionMode = reactionMode;

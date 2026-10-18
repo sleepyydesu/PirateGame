@@ -12,14 +12,18 @@ public class CameraShake : MonoBehaviour
     private float shakeTimer;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    void Awake()
     {
-        noise =  GetComponent<CinemachineBasicMultiChannelPerlin>();
+        noise = GetComponent<CinemachineBasicMultiChannelPerlin>();
 
         if (noise == null)
         {
-            Debug.LogError("CinemachineBasicMulriChanelPerlin not found.");
+            Debug.LogError(
+                "CinemachineBasicMultiChannelPerlin not found.",
+                this);
         }
+
+        StopShake();
     }
 
     // Update is called once per frame
@@ -38,19 +42,41 @@ public class CameraShake : MonoBehaviour
 
     public void Shake()
     {
-        if (noise == null)
+        Shake(shakeAmplitude, shakeFrequency, shakeDuration);
+    }
+
+    public void Shake(float amplitude, float frequency, float duration)
+    {
+        if (noise == null ||
+            !isActiveAndEnabled ||
+            duration <= 0f)
         {
             return;
         }
 
-        shakeTimer = shakeDuration;
+        amplitude = Mathf.Max(0f, amplitude);
+        frequency = Mathf.Max(0f, frequency);
 
-        noise.AmplitudeGain = shakeAmplitude;
-        noise.FrequencyGain = shakeFrequency;
+        if (shakeTimer <= 0f)
+        {
+            noise.AmplitudeGain = amplitude;
+            noise.FrequencyGain = frequency;
+        }
+        else
+        {
+            noise.AmplitudeGain =
+                Mathf.Max(noise.AmplitudeGain, amplitude);
+
+            noise.FrequencyGain =
+                Mathf.Max(noise.FrequencyGain, frequency);
+        }
+
+        shakeTimer = Mathf.Max(shakeTimer, duration);
     }
 
     private void StopShake()
     {
+        shakeTimer = 0f;
         if (noise == null)
         {
             return;
@@ -58,5 +84,10 @@ public class CameraShake : MonoBehaviour
 
         noise.AmplitudeGain = 0f;
         noise.FrequencyGain = 0f;
+    }
+
+    private void OnDisable()
+    {
+        StopShake();
     }
 }

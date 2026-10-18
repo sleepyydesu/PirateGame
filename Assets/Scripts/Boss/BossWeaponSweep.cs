@@ -20,16 +20,25 @@ namespace PirateGame.Enemies
         private HitReactionType hitReaction;
         private HitReactionMode hitReactionMode;
         private bool open;
+        private float pushDistance, pushSeconds, blockedPushDistance, blockedPushSeconds;
         private Vector3 previousBase, previousTip;
         public void Open(
         GameObject attacker,
         float amount,
         HitReactionType reaction = HitReactionType.Default,
-        HitReactionMode reactionMode = HitReactionMode.Stagger)
+        HitReactionMode reactionMode = HitReactionMode.Stagger,
+        float hitPushDistance = 0f,
+        float hitPushSeconds = 0.12f,
+        float hitBlockedPushDistance = 0f,
+        float hitBlockedPushSeconds = 0.12f)
         {
             Close();
             hitReaction = reaction;
             hitReactionMode = reactionMode;
+            pushDistance = Mathf.Max(0f, hitPushDistance);
+            pushSeconds = Mathf.Max(0.05f, hitPushSeconds);
+            blockedPushDistance = Mathf.Max(0f, hitBlockedPushDistance);
+            blockedPushSeconds = Mathf.Max(0.05f, hitBlockedPushSeconds);
             if (bladeBase == null || bladeTip == null) return;
             owner = attacker; damage = amount; hit.Clear(); open = true;
             previousBase = bladeBase.position; previousTip = bladeTip.position;
@@ -72,13 +81,26 @@ namespace PirateGame.Enemies
                     QueryTriggerInteraction.Ignore)) continue;
                 // Deduplicate by receiver, not collider: one body may have many colliders.
                 hit.Add(receiver);
-                receiver.TakeDamage(new DamageInfo(
-                damage,
-                owner,
-                point,
-                hitReaction,
-                hitReactionMode));
-                onContact.Invoke(); // Presentation hook, not proof that health actually decreased.
+                                Component body = receiver as Component;
+                Vector3 away = (body != null ? body.transform.position : col.bounds.center)
+                    - owner.transform.position;
+                away.y = 0f;
+                if (away.sqrMagnitude < 0.0001f) away = owner.transform.forward;
+                away.y = 0f;
+
+                DamageInfo info = new DamageInfo(
+                    damage, owner, point, hitReaction, hitReactionMode)
+                {
+                    HasImpactOrigin = true,
+                    ImpactOrigin = owner.transform.position,
+                    KnockbackDirection = away.normalized,
+                    KnockbackDistance = pushDistance,
+                    KnockbackSeconds = pushSeconds,
+                    HasBlockedKnockback = true,
+                    BlockedKnockbackDistance = blockedPushDistance,
+                    BlockedKnockbackSeconds = blockedPushSeconds
+                };
+                receiver.TakeDamage(info);
             }
         }
     }

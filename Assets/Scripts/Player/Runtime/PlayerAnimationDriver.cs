@@ -16,10 +16,32 @@ namespace PirateGame.PlayerV2
         private float hurtPulseUntil;
         public bool Faulted => exited;
         public bool ActionEntered => entered && !exited && expectedHash != 0;
+        public bool ActionFinished
+        {
+            get
+            {
+                if (animator == null ||
+                    expectedLayer < 0 ||
+                    !ActionEntered)
+                {
+                    return false;
+                }
+
+                AnimatorStateInfo state =
+                    animator.GetCurrentAnimatorStateInfo(expectedLayer);
+
+                return state.fullPathHash == expectedHash &&
+                       !state.loop &&
+                       state.normalizedTime >= 1f;
+            }
+        }
         public float PlaybackScale => animator == null ? 1f : Mathf.Max(0f, animator.speed);
         public bool HasState(int layer, string path) => animator != null && layer < animator.layerCount &&
             animator.HasState(layer, Animator.StringToHash(path));
-        private void Awake() { animator = GetComponent<Animator>(); }
+        private void Awake() { 
+            animator = GetComponent<Animator>(); 
+            animator.applyRootMotion = true;
+            }
         public bool Validate()
         {
             if (animator.runtimeAnimatorController == null || animator.layerCount != 4) return false;
@@ -38,7 +60,7 @@ namespace PirateGame.PlayerV2
         }
         public void Begin(int layer, string path)
         {
-            if (layer == 3)
+            if (layer == 0 || layer == 3)
             {
                 blockPulseUntil = 0f;
                 hurtPulseUntil = 0f;
@@ -61,26 +83,68 @@ namespace PirateGame.PlayerV2
         public void StateExited(int layer, int hash) { if (layer == expectedLayer && hash == expectedHash && entered) exited = true; }
         public bool Accept(AnimationEvent e) => isActiveAndEnabled && e.isFiredByAnimator && entered && !exited &&
             expectedHash != 0 && e.animatorStateInfo.fullPathHash == expectedHash;
-        public void Visuals(bool drawn, bool airborne, bool crouched, bool sprintJump, bool rolling,
-            int actionLayer, float normalizedSpeed, float dt)
+        public void Visuals(
+    bool drawn,
+    bool airborne,
+    bool crouched,
+    bool sprintJump,
+    bool rolling,
+    int actionLayer,
+    float normalizedSpeed,
+    float dt)
         {
             animator.SetFloat(Speed, normalizedSpeed, 0.08f, dt);
-            float combat = !rolling && !airborne && !crouched && (drawn || actionLayer == 1) ? 1f : 0f;
-            float arms = !rolling && !airborne && !crouched && actionLayer == 2 ? 1f : 0f;
+
+            bool baseAction = actionLayer == 0;
+
+            float combat =
+                !rolling && !airborne && !crouched &&
+                (drawn || actionLayer == 1) ? 1f : 0f;
+
+            float arms =
+                !rolling && !airborne && !crouched &&
+                actionLayer == 2 ? 1f : 0f;
+
             float damage =
                 actionLayer == 3 ||
                 Time.time < blockPulseUntil ||
-                Time.time < hurtPulseUntil
-                    ? 1f
-                    : 0f;
-            // Body ownership changes immediately; overlays fade out smoothly when they release.
-            SetWeight(1, combat, dt); SetWeight(2, arms, dt); SetWeight(3, damage, dt);
-            if (!rolling)
-                Ensure(0, airborne ? (sprintJump ? "Base Layer.Player_SprintJump" : "Base Layer.Player_Jump") :
-                    crouched ? "Base Layer.Crouch_Blend_Tree" :
-                    Time.time < landPoseUntil && normalizedSpeed < 0.1f ? "Base Layer.Player_Land" : BaseLocomotion);
-            if (actionLayer != 1) Ensure(1, CombatLocomotion);
-            if (actionLayer != 2) Ensure(2, ArmsDefault);
+                Time.time < hurtPulseUntil ? 1f : 0f;
+
+            if (baseAction)
+            {
+                animator.SetLayerWeight(1, 0f);
+                animator.SetLayerWeight(2, 0f);
+                animator.SetLayerWeight(3, 0f);
+            }
+            else
+            {
+                SetWeight(1, combat, dt);
+                SetWeight(2, arms, dt);
+                SetWeight(3, damage, dt);
+            }
+
+            if (!rolling && !baseAction)
+            {
+                Ensure(
+                    0,
+                    airborne
+                        ? (sprintJump
+                            ? "Base Layer.Player_SprintJump"
+                            : "Base Layer.Player_Jump")
+                        : crouched
+                            ? "Base Layer.Crouch_Blend_Tree"
+                            : Time.time < landPoseUntil &&
+                              normalizedSpeed < 0.1f
+                                ? "Base Layer.Player_Land"
+                                : BaseLocomotion);
+            }
+
+            if (actionLayer != 1)
+                Ensure(1, CombatLocomotion);
+
+            if (actionLayer != 2)
+                Ensure(2, ArmsDefault);
+
             if (actionLayer != 3 &&
                 Time.time >= blockPulseUntil &&
                 Time.time >= hurtPulseUntil)

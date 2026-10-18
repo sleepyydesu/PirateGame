@@ -27,6 +27,33 @@ AnimatorState:
   m_MirrorParameter: 
   m_CycleOffsetParameter: 
   m_TimeParameter: 
+--- !u!1102 &-8647099186211314702
+AnimatorState:
+  serializedVersion: 6
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Boss_BlockHit
+  m_Speed: 1
+  m_CycleOffset: 0
+  m_Transitions: []
+  m_StateMachineBehaviours:
+  - {fileID: -3986644206702969314}
+  m_Position: {x: 50, y: 50, z: 0}
+  m_IKOnFeet: 0
+  m_WriteDefaultValues: 0
+  m_Mirror: 0
+  m_SpeedParameterActive: 0
+  m_MirrorParameterActive: 0
+  m_CycleOffsetParameterActive: 0
+  m_TimeParameterActive: 0
+  m_Motion: {fileID: -203655887218126122, guid: 504fcdd2d5d30b1468ba438230c30cd0, type: 3}
+  m_Tag: 
+  m_SpeedParameter: 
+  m_MirrorParameter: 
+  m_CycleOffsetParameter: 
+  m_TimeParameter: 
 --- !u!1101 &-8332982159106143389
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -306,6 +333,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc644f65826e4124a81bedbac9f93872, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PirateGame.Enemies.BossActionState
+--- !u!114 &-4177247120616771487
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc644f65826e4124a81bedbac9f93872, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PirateGame.Enemies.BossActionState
+--- !u!114 &-3986644206702969314
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc644f65826e4124a81bedbac9f93872, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PirateGame.Enemies.BossActionState
 --- !u!114 &-3893548559769311251
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -318,6 +369,60 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc644f65826e4124a81bedbac9f93872, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PirateGame.Enemies.BossActionState
+--- !u!1102 &-3851538345890648235
+AnimatorState:
+  serializedVersion: 6
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Boss_Stepback
+  m_Speed: 1
+  m_CycleOffset: 0
+  m_Transitions: []
+  m_StateMachineBehaviours:
+  - {fileID: -4177247120616771487}
+  m_Position: {x: 50, y: 50, z: 0}
+  m_IKOnFeet: 0
+  m_WriteDefaultValues: 0
+  m_Mirror: 0
+  m_SpeedParameterActive: 0
+  m_MirrorParameterActive: 0
+  m_CycleOffsetParameterActive: 0
+  m_TimeParameterActive: 0
+  m_Motion: {fileID: -203655887218126122, guid: 6d710ddcb05528b46812147f4bef1f03, type: 3}
+  m_Tag: 
+  m_SpeedParameter: 
+  m_MirrorParameter: 
+  m_CycleOffsetParameter: 
+  m_TimeParameter: 
+--- !u!1102 &-3448838113739262144
+AnimatorState:
+  serializedVersion: 6
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Boss_Guard
+  m_Speed: 1
+  m_CycleOffset: 0
+  m_Transitions: []
+  m_StateMachineBehaviours:
+  - {fileID: 609257316104791063}
+  m_Position: {x: 50, y: 50, z: 0}
+  m_IKOnFeet: 0
+  m_WriteDefaultValues: 0
+  m_Mirror: 0
+  m_SpeedParameterActive: 0
+  m_MirrorParameterActive: 0
+  m_CycleOffsetParameterActive: 0
+  m_TimeParameterActive: 0
+  m_Motion: {fileID: -203655887218126122, guid: 68f0f2c7fa8667b4eb9d3ad5967bbb4a, type: 3}
+  m_Tag: 
+  m_SpeedParameter: Speed
+  m_MirrorParameter: 
+  m_CycleOffsetParameter: Speed
+  m_TimeParameter: Speed
 --- !u!1101 &-2729222340502950112
 AnimatorStateTransition:
   m_ObjectHideFlags: 1
@@ -455,7 +560,7 @@ AnimatorState:
   m_TimeParameterActive: 0
   m_Motion: {fileID: -203655887218126122, guid: 47c5638aa0367634a9d12e0b85b80b3d, type: 3}
   m_Tag: 
-  m_SpeedParameter: 
+  m_SpeedParameter: Speed
   m_MirrorParameter: 
   m_CycleOffsetParameter: 
   m_TimeParameter: 
@@ -705,6 +810,18 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!114 &609257316104791063
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc644f65826e4124a81bedbac9f93872, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PirateGame.Enemies.BossActionState
 --- !u!114 &622756601270322418
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -1178,7 +1295,7 @@ AnimatorState:
   m_TimeParameterActive: 0
   m_Motion: {fileID: -203655887218126122, guid: 12edea888c7e2ff4e9847410780e7cfb, type: 3}
   m_Tag: 
-  m_SpeedParameter: 
+  m_SpeedParameter: Speed
   m_MirrorParameter: 
   m_CycleOffsetParameter: 
   m_TimeParameter: 
@@ -1267,6 +1384,15 @@ AnimatorStateMachine:
   - serializedVersion: 1
     m_State: {fileID: 4984888329475414212}
     m_Position: {x: 220, y: -300, z: 0}
+  - serializedVersion: 1
+    m_State: {fileID: -3448838113739262144}
+    m_Position: {x: 640, y: 310, z: 0}
+  - serializedVersion: 1
+    m_State: {fileID: -8647099186211314702}
+    m_Position: {x: 760, y: 230, z: 0}
+  - serializedVersion: 1
+    m_State: {fileID: -3851538345890648235}
+    m_Position: {x: 889.32227, y: 45.496246, z: 0}
   m_ChildStateMachines: []
   m_AnyStateTransitions:
   - {fileID: 7554438454568099010}

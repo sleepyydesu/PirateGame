@@ -4,8 +4,10 @@ using PirateGame.Combat;
 
 public class DamageDealer : MonoBehaviour
 {
-    bool canDealDamage;
-    List<GameObject> hasDealtDamage;
+    private bool canDealDamage;
+
+    private readonly List<GameObject> hasDealtDamage =
+        new List<GameObject>();
 
     [SerializeField] float weaponLength;
     [SerializeField] float weaponDamage;
@@ -14,12 +16,6 @@ public class DamageDealer : MonoBehaviour
 
     [Tooltip("Set at runtime by PlayerUpgrades (quest rewards). 1 = base damage.")]
     public float damageMultiplier = 1f;
-
-    void Start()
-    {
-        canDealDamage = false;
-        hasDealtDamage = new List<GameObject>();
-    }
 
     void Update()
     {
@@ -48,13 +44,22 @@ public class DamageDealer : MonoBehaviour
 
     public void StartDealDamage()
     {
-        canDealDamage = true;
+        // The Weapon Bridge disables this component.
+        // Ignore old calls while it is disabled.
+        if (!isActiveAndEnabled)
+            return;
+
         hasDealtDamage.Clear();
+        canDealDamage = true;
     }
 
     public void EndDealDamage()
     {
         canDealDamage = false;
+    }
+    private void OnDisable()
+    {
+        EndDealDamage();
     }
 
     private void OnDrawGizmos()

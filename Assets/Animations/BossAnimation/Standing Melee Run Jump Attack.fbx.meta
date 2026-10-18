@@ -77,27 +77,6 @@ ModelImporter:
         floatParameter: 0
         intParameter: 0
         messageOptions: 0
-      - time: 0.48786098
-        functionName: AE_JumpLand
-        data: 
-        objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
-        floatParameter: 0
-        intParameter: 0
-        messageOptions: 0
-      - time: 0.49959487
-        functionName: AE_HitboxOff
-        data: 
-        objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
-        floatParameter: 0
-        intParameter: 0
-        messageOptions: 0
-      - time: 0.50483954
-        functionName: End
-        data: 
-        objectReferenceParameter: {fileID: 11500000, guid: 67f85990f6c3e13418364404eba9f97f, type: 3}
-        floatParameter: 0
-        intParameter: 0
-        messageOptions: 0
       - time: 0.5580292
         functionName: End
         data: 
@@ -107,6 +86,20 @@ ModelImporter:
         messageOptions: 0
       - time: 0.96541137
         functionName: AE_ActionComplete
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.49399897
+        functionName: AE_JumpLand
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.51342964
+        functionName: AE_HitboxOff
         data: 
         objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
         floatParameter: 0

@@ -8,6 +8,16 @@ namespace PirateGame.PlayerV2
         private PlayerCombat combat;
         private void Awake() { driver = GetComponent<PlayerAnimationDriver>(); combat = GetComponent<PlayerCombat>(); }
         private bool Accept(AnimationEvent e) => combat != null && combat.Ready && combat.isActiveAndEnabled && driver.Accept(e);
+        public void AE_PotionGrab(AnimationEvent e)
+        {
+            if (Accept(e))
+                combat.EventPotionGrab();
+        }
+        public void AE_PotionSip(AnimationEvent e)
+        {
+            if (Accept(e))
+                combat.EventPotionSip();
+        }
         public void AE_Commit(AnimationEvent e) { if (Accept(e)) combat.EventCommit(); }
         public void AE_HitboxOn(AnimationEvent e) { if (Accept(e)) combat.EventHitOn(); }
         public void AE_HitboxOff(AnimationEvent e) { if (Accept(e)) combat.EventHitOff(); }
@@ -23,7 +33,7 @@ namespace PirateGame.PlayerV2
         private void OnAnimatorMove()
         {
             if (combat == null || !combat.Ready || !combat.RootTranslation || !combat.isActiveAndEnabled) return;
-            combat.Motor.ApplyRootTranslation(GetComponent<Animator>().deltaPosition);
+            combat.ApplyAttackRootMotion(GetComponent<Animator>().deltaPosition);
         }
     }
 }

@@ -9,7 +9,7 @@ using Random = UnityEngine.Random;
 namespace PirateGame.Enemies
 {
     [RequireComponent(typeof(NavMeshAgent), typeof(Health))]
-    public sealed class BossAI : MonoBehaviour
+    public sealed partial class BossAI : MonoBehaviour, IIncomingDamageFilter
     {
         public enum State
         {
@@ -23,7 +23,9 @@ namespace PirateGame.Enemies
             PhaseTransition,
             Stagger,
             Dead,
-            ReturnHome
+            ReturnHome,
+            Guard,
+            Backstep
         }
 
         [Serializable]
@@ -32,6 +34,22 @@ namespace PirateGame.Enemies
             public string name = "The Gentleman";
             [Range(0f, 1f)] public float healthThreshold = 1f;
             [Min(0.1f)] public float speedMultiplier = 1f;
+            [Header("Attack pace")]
+            [Range(0.5f, 1.5f)]
+            public float attackAnimationSpeed = 1f;
+
+            [Range(0.3f, 2f)]
+            public float decisionDelayMultiplier = 1f;
+
+            [Range(0.3f, 2f)]
+            public float recoveryMultiplier = 1f;
+
+            [Range(0.3f, 2f)]
+            public float attackCooldownMultiplier = 1f;
+
+            [Header("Attack variety")]
+            [Range(0f, 1f)]
+            public float repeatAttackWeight = 0.2f;
             [Min(0.1f)] public float minimumRecovery = 0.6f;
             [Range(0, 3)] public int maxExtensions = 1;
         }
@@ -46,6 +64,13 @@ namespace PirateGame.Enemies
         [SerializeField] private Transform player;
         [SerializeField] private Animator animator;
         [SerializeField] private BossWeaponSweep weapon;
+        [SerializeField] private BossGroundBurst groundBurst;
+        [Header("Phase-change roar burst")]
+        [SerializeField] private CaptainAttack roarBurstSettings;
+
+        private bool roarBurstUsed;
+        private bool comboGroundBurstUsed;
+        private bool suppressSwordForGroundBurst;
         [SerializeField] private CaptainAttack[] attacks;
         private bool jumpActive, jumpStarted, jumpLanded;
         private Vector3 jumpStart, jumpEnd;
@@ -92,10 +117,14 @@ namespace PirateGame.Enemies
         [SerializeField] private Transform airSlashBladeBase;
         [SerializeField] private Transform airSlashBladeTip;
 
-        private bool projectileQueued;
-        private bool projectileFired;
-        private int queuedProjectileStateHash;
-        private Vector3 queuedProjectileAim;
+        private struct PendingAirSlash
+        {
+            public int stateHash;
+            public Vector3 aim;
+        }
+
+        private readonly Queue<PendingAirSlash> pendingAirSlashes =
+            new Queue<PendingAirSlash>();
         private float nextRangedDecisionAt;
 
         private BossStateMachine.Node returnHome;
@@ -156,6 +185,10 @@ namespace PirateGame.Enemies
             whiffReactAt, circleSign = 1f;
         private bool committed, parryWindow, chainDecided, stateExited, speedParameter, configured, fatigueOwed;
         private static readonly int SpeedHash = Animator.StringToHash("Speed");
+        private static readonly int AttackPlaybackHash = Animator.StringToHash("AttackPlayback");
+
+        private float AttackPlayback =>
+            Mathf.Clamp(CurrentPhase.attackAnimationSpeed, 0.5f, 1.5f);
         private static readonly int MoveXHash = Animator.StringToHash("MoveX");
         private static readonly int MoveZHash = Animator.StringToHash("MoveZ");
         private bool directionParameters;
@@ -173,10 +206,17 @@ namespace PirateGame.Enemies
             agent.updateRotation = false; // One owner of rotation; never NavMesh + code simultaneously.
             CacheAnimatorParameters();
             BuildHierarchy();
+            BuildDuelStates();
         }
-        private void OnEnable() { health.OnDamaged += HandleDamaged; health.OnDeath += HandleDeath; }
+        private void OnEnable()
+        {
+            health.OnDamaged += HandleDamaged;
+            health.OnDeath += HandleDeath;
+            health.InstallDamageFilter(this);
+        }
         private void OnDisable()
         {
+            health.RemoveDamageFilter(this);
             health.OnDamaged -= HandleDamaged; health.OnDeath -= HandleDeath;
             CancelAction(); Stop();
             // Pool reset/revival is deliberately an encounter-level responsibility.
@@ -206,7 +246,9 @@ namespace PirateGame.Enemies
             }
             configured = ValidateConfiguration();
             if (!configured) { enabled = false; return; }
-            SetTarget(player); machine.Change(idle);
+            SetTarget(player);
+            ValidateDuelSetup();
+            machine.Change(idle);
             if (health.IsDead) HandleDeath();
         }
         public void SetTarget(Transform target)
@@ -274,7 +316,11 @@ namespace PirateGame.Enemies
             approach = Leaf("Approach", combat, State.Chase, null, TickApproach);
             circle = Leaf("Circle", combat, State.Circle, () =>
             {
-                circleSign = Random.value < 0.5f ? -1f : 1f; decisionAt = Time.time + Random.Range(0.4f, 0.7f);
+                circleSign = Random.value < 0.5f ? -1f : 1f;
+
+                decisionAt = Time.time +
+                    Random.Range(0.4f, 0.7f) *
+                    CurrentPhase.decisionDelayMultiplier;
             }, TickCircle);
             attack = Leaf("Attack", combat, State.Attack, null, TickAttack);
             recover = Leaf("Recovery", combat, State.Recovery, () => { Stop(); ForceLocomotion(); }, () =>
@@ -290,6 +336,7 @@ namespace PirateGame.Enemies
             }, () => { if (Time.time >= recoveryUntil) { fatigue = 0f; fatigueOwed = false; machine.Change(circle); } return true; });
             taunt = Leaf("Taunt", combat, State.Taunt, () =>
             {
+                roarBurstUsed = false;
                 Stop(); tauntReadyAt = Time.time + 12f;
                 BeginAnimation(tauntAnimation.trigger, tauntAnimation.fullStateName, tauntAnimation.watchdog);
                 onTaunt.Invoke();
@@ -322,6 +369,8 @@ namespace PirateGame.Enemies
         }
         private void Update()
         {
+            // DebugDuelStatus();
+
             if (!configured || CurrentState == State.Dead) return;
             if (health.IsDead) { HandleDeath(); return; } // Death has priority over cinematic/stagger.
             if (TargetAlive && Visible()) { lastSeen = player.position; seenAt = Time.time; }
@@ -432,6 +481,8 @@ namespace PirateGame.Enemies
             bool safe =
                 CurrentState == State.Chase ||
                 CurrentState == State.Circle ||
+                CurrentState == State.Guard ||
+                CurrentState == State.Backstep ||
                 ((CurrentState == State.Recovery ||
                   CurrentState == State.Fatigue) &&
                  Time.time >= recoveryUntil);
@@ -442,7 +493,7 @@ namespace PirateGame.Enemies
                 return false;
             }
 
-            return true;
+            return !TickDuelDefense();
         }
 
         private void EnterReturnHome()
@@ -604,7 +655,8 @@ namespace PirateGame.Enemies
                 fatigue < fatigueThreshold &&
                 Visible())
             {
-                nextRangedDecisionAt = Time.time + 0.35f;
+                nextRangedDecisionAt = Time.time +
+                    0.35f * CurrentPhase.decisionDelayMultiplier;
 
                 CaptainAttack ranged =
                     SelectAttack(projectileOnly: true);
@@ -619,7 +671,29 @@ namespace PirateGame.Enemies
             Move(lastSeen, chaseSpeed * CurrentPhase.speedMultiplier);
 
             if (Distance <= preferredDistance + 0.6f && Visible())
+            {
+                // Keep the boss's required fatigue break.
+                if (fatigueOwed || fatigue >= fatigueThreshold)
+                {
+                    machine.Change(rest);
+                    return true;
+                }
+
+                // Try an available attack immediately on arrival.
+                CaptainAttack arrivalAttack = SelectAttack();
+
+                if (arrivalAttack != null)
+                {
+                    StartAttack(arrivalAttack, false);
+                    return true;
+                }
+
+                // If no attack is available yet, circle and check next frame.
                 machine.Change(circle);
+                decisionAt = Time.time;
+
+                return true;
+            }
 
             return true;
         }
@@ -628,7 +702,9 @@ namespace PirateGame.Enemies
             if (player == null) return true;
             CircleMovement();
             if (Time.time < decisionAt) return true;
-            decisionAt = Time.time + Random.Range(0.3f, 0.5f);
+            decisionAt = Time.time +
+                Random.Range(0.3f, 0.5f) *
+                CurrentPhase.decisionDelayMultiplier;
             if (fatigue >= fatigueThreshold) { machine.Change(rest); return true; }
             bool observedWhiff =
             Time.time >= whiffReactAt &&
@@ -682,7 +758,8 @@ namespace PirateGame.Enemies
                 if (projectileOnly && !a.isProjectileAttack)
                     continue;
                 float score = phaseIndex == 0 ? a.phase1Weight : a.phase2Weight;
-                if (a == lastAttack) score *= 0.2f; // Soft novelty bias, not forced random alternation.
+                if (a == lastAttack)
+                    score *= CurrentPhase.repeatAttackWeight; // Soft novelty bias, not forced random alternation.
                 if (a.punishHealing && Time.time >= healReactAt && Time.time - healObservedAt < 1.5f) score *= 3f;
                 score *= Mathf.Lerp(1f, 0.4f, Mathf.Clamp01(fatigue / fatigueThreshold));
                 if (score <= 0f) continue;
@@ -708,14 +785,16 @@ namespace PirateGame.Enemies
             // Extensions have their own authored tell. Never restart the same state in a blend.
             CancelAction();
             currentAttack = a; queuedChain = null; chainDecided = false;
-            projectileFired = false;
-            projectileQueued = false;
+            pendingAirSlashes.Clear();
             if (!continuation) extensions = 0;
             machine.Change(attack); Stop();
             committed = false; parryWindow = false;
             attackStepOpen = false;
             attackStepRemaining = a.attackStepDistance;
-            lastAttack = a; readyAt[a] = Time.time + a.cooldown;
+            lastAttack = a;
+
+            readyAt[a] = Time.time +
+                a.cooldown * CurrentPhase.attackCooldownMultiplier;
             fatigue += a.fatigueCost; // Spend on attempt, including whiffs and interruptions.
             fatigueOwed |= fatigue >= fatigueThreshold; // Recovery decay cannot erase an earned rest.
             BeginAnimation(a.trigger, a.fullStateName, a.watchdogSeconds);
@@ -992,7 +1071,26 @@ namespace PirateGame.Enemies
                 return;
             }
 
-            OpenHitbox();
+            if (currentAttack.useGroundBurst)
+            {
+                if (groundBurst != null)
+                {
+                    groundBurst.QueueImpact(
+                        gameObject,
+                        currentAttack,
+                        jumpEnd);
+                }
+                else
+                {
+                    Debug.LogError(
+                        "Assign BossGroundBurst on the boss.",
+                        this);
+                }
+            }
+            else
+            {
+                OpenHitbox();
+            }
         }
 
         private void CancelJump()
@@ -1043,7 +1141,10 @@ namespace PirateGame.Enemies
                 return;
             }
 
-            float dt = Time.deltaTime * Mathf.Max(0f, animator.speed);
+            float dt =
+                Time.deltaTime *
+                Mathf.Max(0f, animator.speed) *
+                AttackPlayback;
 
             float step = Mathf.Min(
                 currentAttack.attackStepSpeed * dt,
@@ -1096,7 +1197,14 @@ namespace PirateGame.Enemies
         private bool TickAction()
         {
             // Advance by Animator speed so local animator hit-stop does not consume the budget.
-            actionAge += Time.deltaTime * Mathf.Max(0f, animator.speed);
+            float playback = CurrentState == State.Attack
+                ? AttackPlayback
+                : 1f;
+
+            actionAge +=
+                Time.deltaTime *
+                Mathf.Max(0f, animator.speed) *
+                playback;
 
             if (stateExited)
             {
@@ -1115,6 +1223,7 @@ namespace PirateGame.Enemies
         }
         private void BeginAnimation(string trigger, string fullPath, float watchdog)
         {
+            animator.SetFloat(AttackPlaybackHash, AttackPlayback);
             expectedHash = Animator.StringToHash(fullPath); enteredHash = 0;
             actionAge = 0f; actionTimeout = Mathf.Max(0.2f, watchdog); stateExited = false;
             Trigger(trigger);
@@ -1144,7 +1253,7 @@ namespace PirateGame.Enemies
 
             if (CurrentState != State.Attack || currentAttack == null)
                 return;
-
+            suppressSwordForGroundBurst = false;
             // The previous strike must stop dealing damage before aiming again.
             CloseHitbox();
             parryWindow = false;
@@ -1209,8 +1318,9 @@ namespace PirateGame.Enemies
             if (CurrentState != State.Attack ||
                 currentAttack == null ||
                 !currentAttack.isProjectileAttack ||
-                projectileQueued ||
-                projectileFired ||
+                expectedHash == 0 ||
+                enteredHash != expectedHash ||
+                stateExited ||
                 !TargetAlive)
             {
                 return;
@@ -1222,59 +1332,73 @@ namespace PirateGame.Enemies
                 Debug.LogWarning(
                     "Air slash needs a spawn point and projectile prefab.",
                     this);
+
                 return;
             }
 
-            // Remember the target position at the release event.
-            queuedProjectileAim =
-                player.position +
-                Vector3.up * currentAttack.projectileAimHeight;
+            // Each accepted animation event adds one shot.
+            pendingAirSlashes.Enqueue(new PendingAirSlash
+            {
+                stateHash = expectedHash,
 
-            queuedProjectileStateHash = expectedHash;
-            projectileQueued = true;
+                aim = player.position +
+                      Vector3.up * currentAttack.projectileAimHeight
+            });
 
             CommitAttack();
         }
 
         private void LateUpdate()
         {
-            if (!projectileQueued)
+            if (pendingAirSlashes.Count == 0)
                 return;
 
-            projectileQueued = false;
-
+            // Cancel pending shots if this attack is no longer valid.
             if (CurrentState != State.Attack ||
                 currentAttack == null ||
                 !currentAttack.isProjectileAttack ||
-                projectileFired ||
-                expectedHash != queuedProjectileStateHash ||
+                projectileSpawnPoint == null ||
+                currentAttack.projectilePrefab == null ||
                 enteredHash != expectedHash ||
                 stateExited ||
                 !TargetAlive)
             {
+                pendingAirSlashes.Clear();
                 return;
             }
 
-            projectileFired = true;
+            // Release after animation has updated the sword pose.
+            while (pendingAirSlashes.Count > 0)
+            {
+                PendingAirSlash shot = pendingAirSlashes.Dequeue();
 
+                if (shot.stateHash != expectedHash)
+                    continue;
+
+                SpawnAirSlash(shot.aim);
+            }
+        }
+
+        private void SpawnAirSlash(Vector3 aim)
+        {
             Vector3 spawnPosition = projectileSpawnPoint.position;
 
-            // Prevent releasing the projectile through a nearby wall.
+            // Keep the existing wall check.
             Vector3 bodyPoint = new Vector3(
                 transform.position.x,
                 spawnPosition.y,
                 transform.position.z);
 
             if (Physics.Linecast(
-                    bodyPoint,
-                    spawnPosition,
-                    environment,
-                    QueryTriggerInteraction.Ignore))
+                bodyPoint,
+                spawnPosition,
+                environment,
+                QueryTriggerInteraction.Ignore))
             {
                 return;
             }
 
-            Vector3 direction = queuedProjectileAim - spawnPosition;
+            Vector3 direction = aim - spawnPosition;
 
             if (direction.sqrMagnitude < 0.0001f)
                 return;
@@ -1291,6 +1415,7 @@ namespace PirateGame.Enemies
                 minimum,
                 Mathf.Max(range.x, range.y));
 
+            // Pick a speed separately for each projectile.
             float speed = Random.Range(minimum, maximum);
 
             SwordAirSlashProjectile projectile = Instantiate(
@@ -1306,8 +1431,97 @@ namespace PirateGame.Enemies
                 currentAttack.hitReaction,
                 currentAttack.hitReactionMode);
         }
-        public void OpenHitbox()
+        public void PrepareGroundBurst()
         {
+            if (CurrentState != State.Attack ||
+                currentAttack == null ||
+                currentAttack.jumpSlam ||
+                !currentAttack.useGroundBurst)
+            {
+                return;
+            }
+
+            // This strike will use burst damage instead of sword damage.
+            suppressSwordForGroundBurst = true;
+            CloseHitbox();
+            parryWindow = false;
+        }
+        public void RoarBurstFromAnimation()
+        {
+            if (!isActiveAndEnabled ||
+                CurrentState != State.PhaseTransition ||
+                roarBurstUsed)
+            {
+                return;
+            }
+
+            if (groundBurst == null ||
+                !groundBurst.isActiveAndEnabled ||
+                roarBurstSettings == null)
+            {
+                Debug.LogError(
+                    "Assign BossGroundBurst and Roar Burst Settings.",
+                    this);
+
+                return;
+            }
+
+            roarBurstUsed = true;
+
+            groundBurst.QueueImpact(
+                gameObject,
+                roarBurstSettings,
+                transform.position,
+                fromCombo: false,
+                pointOverride: transform);
+        }
+
+        public void GroundBurstFromAnimation()
+        {
+            if (CurrentState != State.Attack ||
+                currentAttack == null ||
+                currentAttack.jumpSlam ||
+                !currentAttack.useGroundBurst ||
+                comboGroundBurstUsed)
+            {
+                return;
+            }
+
+            PrepareGroundBurst();
+            CommitAttack();
+
+            // Stop a scripted forward step at impact.
+            attackStepOpen = false;
+            attackStepRemaining = 0f;
+
+            if (groundBurst == null || !groundBurst.isActiveAndEnabled)
+            {
+                Debug.LogError(
+                    "Assign an enabled BossGroundBurst component on the boss.",
+                    this);
+
+                return;
+            }
+
+            // This combo supports one ground-burst impact per play.
+            comboGroundBurstUsed = true;
+
+            groundBurst.QueueImpact(
+                gameObject,
+                currentAttack,
+                transform.position,
+                fromCombo: true);
+        }
+        public void OpenHitbox(int hitProfile = 0)
+        {
+            if (suppressSwordForGroundBurst)
+                return;
+            if (currentAttack != null &&
+            currentAttack.jumpSlam &&
+            currentAttack.useGroundBurst)
+            {
+                return;
+            }
             if (currentAttack != null && currentAttack.isProjectileAttack)
                 return;
             if (currentAttack != null &&
@@ -1318,11 +1532,18 @@ namespace PirateGame.Enemies
             }
             if (CurrentState != State.Attack || currentAttack == null) return;
             CommitAttack(); // Missing commit event still cannot enable perfect active-frame tracking.
+            CaptainAttack.MeleeHitSettings hit = currentAttack.GetMeleeHit(hitProfile);
+            if (hitProfile > 0 && hit == null)
+                Debug.LogWarning("Missing melee hit override " + hitProfile + " on " + currentAttack.name + "; using defaults.", this);
             weapon.Open(
-            gameObject,
-            currentAttack.damage,
-            currentAttack.hitReaction,
-            currentAttack.hitReactionMode);
+                gameObject,
+                hit != null && hit.overrideDamage ? hit.damage : currentAttack.damage,
+                hit != null && hit.overrideReaction ? hit.reaction : currentAttack.hitReaction,
+                hit != null && hit.overrideReaction ? hit.reactionMode : currentAttack.hitReactionMode,
+                hit != null ? hit.pushDistance : currentAttack.meleePushDistance,
+                hit != null ? hit.pushSeconds : currentAttack.meleePushSeconds,
+                hit != null ? hit.blockedPushDistance : currentAttack.blockedMeleePushDistance,
+                hit != null ? hit.blockedPushSeconds : currentAttack.blockedMeleePushSeconds);
         }
         public void CloseHitbox() { if (weapon != null) weapon.Close(); }
         public void SetParryWindow(bool open)
@@ -1342,6 +1563,7 @@ namespace PirateGame.Enemies
         public void CompleteAction() { CompleteAction(true); }
         private void CompleteAction(bool authored)
         {
+            if (CompleteDuelAnimation(authored)) return;
             State finished = CurrentState;
             if (finished == State.Attack &&
             currentAttack.jumpSlam &&
@@ -1351,7 +1573,10 @@ namespace PirateGame.Enemies
             }
             if (finished == State.Attack)
             {
-                float recovery = Mathf.Max(CurrentPhase.minimumRecovery, currentAttack.guaranteedRecovery);
+                float recovery = Mathf.Max(
+                    CurrentPhase.minimumRecovery,
+                    currentAttack.guaranteedRecovery *
+                    CurrentPhase.recoveryMultiplier);
                 CaptainAttack next = authored ? queuedChain : null;
                 CloseHitbox(); parryWindow = false;
                 // Recheck eligibility at launch: the player may have escaped after decision.
@@ -1394,6 +1619,7 @@ namespace PirateGame.Enemies
             // A large hit requests the deepest eligible phase; it cannot overwrite death.
             for (int i = phaseIndex + 1; i < phases.Length; i++)
                 if (ratio <= phases[i].healthThreshold) requestedPhase = Mathf.Max(requestedPhase, i);
+            if (info.WasBlocked) return; // The boss filter already processed guard poise.
             poiseDamagedAt = Time.time;
             bool hitByPlayer =
             player != null &&
@@ -1490,7 +1716,10 @@ namespace PirateGame.Enemies
         }
         private void CancelAction()
         {
-            projectileQueued = false;
+            CancelDuelAction();
+            comboGroundBurstUsed = false;
+            suppressSwordForGroundBurst = false;
+            pendingAirSlashes.Clear();
             CancelJump();
             attackStepOpen = false;
             attackStepRemaining = 0f;

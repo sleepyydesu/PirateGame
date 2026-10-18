@@ -66,6 +66,33 @@ AnimatorState:
   m_MirrorParameter: 
   m_CycleOffsetParameter: 
   m_TimeParameter: 
+--- !u!1102 &-8104915245889501511
+AnimatorState:
+  serializedVersion: 6
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Player_GetUp
+  m_Speed: 1.5
+  m_CycleOffset: 0
+  m_Transitions: []
+  m_StateMachineBehaviours:
+  - {fileID: 947938597949251831}
+  m_Position: {x: 50, y: 50, z: 0}
+  m_IKOnFeet: 0
+  m_WriteDefaultValues: 0
+  m_Mirror: 0
+  m_SpeedParameterActive: 0
+  m_MirrorParameterActive: 0
+  m_CycleOffsetParameterActive: 0
+  m_TimeParameterActive: 0
+  m_Motion: {fileID: -203655887218126122, guid: 007fb127cec7743459b13e2c0bf28514, type: 3}
+  m_Tag: 
+  m_SpeedParameter: 
+  m_MirrorParameter: 
+  m_CycleOffsetParameter: 
+  m_TimeParameter: 
 --- !u!1102 &-7761203289675431702
 AnimatorState:
   serializedVersion: 6
@@ -199,10 +226,10 @@ AnimatorStateMachine:
     m_Position: {x: 250, y: 80, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -3054531028875045948}
-    m_Position: {x: 790, y: -190, z: 0}
+    m_Position: {x: 780, y: -150, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 9169691014582525203}
-    m_Position: {x: 750, y: -30, z: 0}
+    m_Position: {x: 750, y: -10, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 8452886090564123364}
     m_Position: {x: 880, y: 270, z: 0}
@@ -218,6 +245,15 @@ AnimatorStateMachine:
   - serializedVersion: 1
     m_State: {fileID: 4818959208560528506}
     m_Position: {x: 150, y: -130, z: 0}
+  - serializedVersion: 1
+    m_State: {fileID: 424314993248186279}
+    m_Position: {x: 940, y: -60, z: 0}
+  - serializedVersion: 1
+    m_State: {fileID: 172999354720037496}
+    m_Position: {x: 910, y: 50, z: 0}
+  - serializedVersion: 1
+    m_State: {fileID: -3543000933686891741}
+    m_Position: {x: 890, y: -210, z: 0}
   m_ChildStateMachines: []
   m_AnyStateTransitions: []
   m_EntryTransitions: []
@@ -282,6 +318,12 @@ AnimatorStateMachine:
   - serializedVersion: 1
     m_State: {fileID: 8565579400058191920}
     m_Position: {x: 390, y: 260, z: 0}
+  - serializedVersion: 1
+    m_State: {fileID: 1217072015379306362}
+    m_Position: {x: 487.8837, y: -110.86716, z: 0}
+  - serializedVersion: 1
+    m_State: {fileID: -8104915245889501511}
+    m_Position: {x: 749.1913, y: 35.340668, z: 0}
   m_ChildStateMachines: []
   m_AnyStateTransitions: []
   m_EntryTransitions: []
@@ -293,6 +335,18 @@ AnimatorStateMachine:
   m_ParentStateMachinePosition: {x: 800, y: 20, z: 0}
   m_DefaultState: {fileID: -4142776692123415375}
 --- !u!114 &-6533989724875666504
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: facbf50f17fceb743a81ebd377aa5646, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PirateGame.PlayerV2.PlayerActionAnimationState
+--- !u!114 &-5940458129289426280
 MonoBehaviour:
   m_ObjectHideFlags: 1
   m_CorrespondingSourceObject: {fileID: 0}
@@ -330,6 +384,18 @@ AnimatorState:
   m_MirrorParameter: 
   m_CycleOffsetParameter: 
   m_TimeParameter: 
+--- !u!114 &-4975233770991729720
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: facbf50f17fceb743a81ebd377aa5646, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PirateGame.PlayerV2.PlayerActionAnimationState
 --- !u!114 &-4636598474495676394
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -407,6 +473,72 @@ AnimatorState:
   m_MirrorParameter: 
   m_CycleOffsetParameter: 
   m_TimeParameter: 
+--- !u!1102 &-3842630707737624271
+AnimatorState:
+  serializedVersion: 6
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Player_DrinkPotion
+  m_Speed: 1
+  m_CycleOffset: 0
+  m_Transitions: []
+  m_StateMachineBehaviours:
+  - {fileID: 2512340154748096823}
+  m_Position: {x: 50, y: 50, z: 0}
+  m_IKOnFeet: 0
+  m_WriteDefaultValues: 1
+  m_Mirror: 0
+  m_SpeedParameterActive: 0
+  m_MirrorParameterActive: 0
+  m_CycleOffsetParameterActive: 0
+  m_TimeParameterActive: 0
+  m_Motion: {fileID: -2789449258353043500, guid: 29ec22e0c80e6c44b9c022eb0fcf3b3b, type: 3}
+  m_Tag: 
+  m_SpeedParameter: 
+  m_MirrorParameter: 
+  m_CycleOffsetParameter: 
+  m_TimeParameter: 
+--- !u!1102 &-3543000933686891741
+AnimatorState:
+  serializedVersion: 6
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Player_LightAttack5
+  m_Speed: 1
+  m_CycleOffset: 0
+  m_Transitions: []
+  m_StateMachineBehaviours:
+  - {fileID: -4975233770991729720}
+  m_Position: {x: 50, y: 50, z: 0}
+  m_IKOnFeet: 0
+  m_WriteDefaultValues: 0
+  m_Mirror: 0
+  m_SpeedParameterActive: 0
+  m_MirrorParameterActive: 0
+  m_CycleOffsetParameterActive: 0
+  m_TimeParameterActive: 0
+  m_Motion: {fileID: 1179855496099388416, guid: 9718652b57aa5fd4b88fb625ae8d74e2, type: 3}
+  m_Tag: 
+  m_SpeedParameter: 
+  m_MirrorParameter: 
+  m_CycleOffsetParameter: 
+  m_TimeParameter: 
+--- !u!114 &-3302863266388389259
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: facbf50f17fceb743a81ebd377aa5646, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PirateGame.PlayerV2.PlayerActionAnimationState
 --- !u!114 &-3185906322277544942
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -440,7 +572,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: 7400000, guid: 9797490338a15044fa94c04de7fc040c, type: 2}
+  m_Motion: {fileID: 3799752391938677124, guid: cdcc8cc702444314c849d880b3299d79, type: 3}
   m_Tag: 
   m_SpeedParameter: 
   m_MirrorParameter: 
@@ -897,6 +1029,60 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: facbf50f17fceb743a81ebd377aa5646, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PirateGame.PlayerV2.PlayerActionAnimationState
+--- !u!1102 &172999354720037496
+AnimatorState:
+  serializedVersion: 6
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Player_LightAttack4
+  m_Speed: 1
+  m_CycleOffset: 0
+  m_Transitions: []
+  m_StateMachineBehaviours:
+  - {fileID: -3302863266388389259}
+  m_Position: {x: 50, y: 50, z: 0}
+  m_IKOnFeet: 0
+  m_WriteDefaultValues: 0
+  m_Mirror: 0
+  m_SpeedParameterActive: 0
+  m_MirrorParameterActive: 0
+  m_CycleOffsetParameterActive: 0
+  m_TimeParameterActive: 0
+  m_Motion: {fileID: -3823125466976625357, guid: fac4ec67ecf6fcd41b9d9071c0dab1b4, type: 3}
+  m_Tag: 
+  m_SpeedParameter: 
+  m_MirrorParameter: 
+  m_CycleOffsetParameter: 
+  m_TimeParameter: 
+--- !u!1102 &424314993248186279
+AnimatorState:
+  serializedVersion: 6
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Player_LightAttack3
+  m_Speed: 1
+  m_CycleOffset: 0
+  m_Transitions: []
+  m_StateMachineBehaviours:
+  - {fileID: -5940458129289426280}
+  m_Position: {x: 50, y: 50, z: 0}
+  m_IKOnFeet: 0
+  m_WriteDefaultValues: 0
+  m_Mirror: 0
+  m_SpeedParameterActive: 0
+  m_MirrorParameterActive: 0
+  m_CycleOffsetParameterActive: 0
+  m_TimeParameterActive: 0
+  m_Motion: {fileID: -7722619981991602695, guid: 1008aa52bc91c054b9cd63aac5e2e8f5, type: 3}
+  m_Tag: 
+  m_SpeedParameter: 
+  m_MirrorParameter: 
+  m_CycleOffsetParameter: 
+  m_TimeParameter: 
 --- !u!114 &487900988272114090
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -947,6 +1133,45 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: facbf50f17fceb743a81ebd377aa5646, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PirateGame.PlayerV2.PlayerActionAnimationState
+--- !u!114 &947938597949251831
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: facbf50f17fceb743a81ebd377aa5646, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PirateGame.PlayerV2.PlayerActionAnimationState
+--- !u!1102 &1217072015379306362
+AnimatorState:
+  serializedVersion: 6
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Player_Knockdown
+  m_Speed: 1
+  m_CycleOffset: 0
+  m_Transitions: []
+  m_StateMachineBehaviours:
+  - {fileID: 4319888680802828371}
+  m_Position: {x: 50, y: 50, z: 0}
+  m_IKOnFeet: 0
+  m_WriteDefaultValues: 0
+  m_Mirror: 0
+  m_SpeedParameterActive: 0
+  m_MirrorParameterActive: 0
+  m_CycleOffsetParameterActive: 0
+  m_TimeParameterActive: 0
+  m_Motion: {fileID: -203655887218126122, guid: 628af6b560fc9ac4687e91f89a15517f, type: 3}
+  m_Tag: 
+  m_SpeedParameter: 
+  m_MirrorParameter: 
+  m_CycleOffsetParameter: 
+  m_TimeParameter: 
 --- !u!1102 &2386987030849357944
 AnimatorState:
   serializedVersion: 6
@@ -974,6 +1199,18 @@ AnimatorState:
   m_MirrorParameter: 
   m_CycleOffsetParameter: 
   m_TimeParameter: 
+--- !u!114 &2512340154748096823
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: facbf50f17fceb743a81ebd377aa5646, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PirateGame.PlayerV2.PlayerActionAnimationState
 --- !u!114 &2532367125585534758
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -1132,6 +1369,9 @@ AnimatorStateMachine:
   - serializedVersion: 1
     m_State: {fileID: 488084903569961719}
     m_Position: {x: 586.86975, y: -187.74286, z: 0}
+  - serializedVersion: 1
+    m_State: {fileID: -3842630707737624271}
+    m_Position: {x: 50, y: -110, z: 0}
   m_ChildStateMachines: []
   m_AnyStateTransitions: []
   m_EntryTransitions: []
@@ -1181,6 +1421,18 @@ AnimatorState:
   m_MirrorParameter: 
   m_CycleOffsetParameter: 
   m_TimeParameter: 
+--- !u!114 &4319888680802828371
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: facbf50f17fceb743a81ebd377aa5646, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PirateGame.PlayerV2.PlayerActionAnimationState
 --- !u!114 &4351124459050029584
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -1685,7 +1937,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: 7400000, guid: 196035b0fe0ae0c41af040bf36a645a8, type: 2}
+  m_Motion: {fileID: -7486082882920451989, guid: d5930b10f9dae7245a5b705da86a3414, type: 3}
   m_Tag: 
   m_SpeedParameter: 
   m_MirrorParameter: 

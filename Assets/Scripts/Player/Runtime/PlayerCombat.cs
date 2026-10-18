@@ -4,7 +4,17 @@ using UnityEngine.Events;
 using PirateGame.Combat;
 namespace PirateGame.PlayerV2
 {
-    public enum PlayerActionKind { Free, Attack, Dodge, Block, Equip, Stagger, Dead }
+    public enum PlayerActionKind
+    {
+        Free,
+        Attack,
+        Dodge,
+        Block,
+        Equip,
+        Stagger,
+        Dead,
+        Heal
+    }
     [RequireComponent(typeof(Health))]
     public sealed class PlayerCombat : MonoBehaviour, IIncomingDamageFilter
     {
@@ -24,6 +34,17 @@ namespace PirateGame.PlayerV2
         private string selectedHurtPath = "Damage Layer.Player_Damage";
 
         private float selectedHurtWatchdog = 2f;
+        private int selectedHurtLayer = 3;
+        private enum KnockdownStage
+        {
+            Falling,
+            Waiting,
+            GettingUp
+        }
+
+        private HitReactionAnimation selectedHurt;
+        private bool knockdownActive;
+        private KnockdownStage knockdownStage;
         [Header("Attack results")]
         public UnityEvent onAttackMissed = new UnityEvent();
         public UnityEvent onConfirmedDamage = new UnityEvent(), onDied = new UnityEvent(), onRevived = new UnityEvent();
@@ -40,9 +61,16 @@ namespace PirateGame.PlayerV2
         public PlayerEquipState Equip { get; private set; }
         public PlayerStaggerState Stagger { get; private set; }
         public PlayerDeadState Dead { get; private set; }
+        public PlayerHealState Healing { get; private set; }
+        public PlayerPotion Potion { get; private set; }
         private Health health;
         private PlayerAttackAim attackAim;
         private PlayerAttackState attack;
+        private PlayerAttackDefinition queuedFollowup;
+
+        private readonly Dictionary<PlayerAttackDefinition, PlayerAttackDefinition>
+            lastFollowups =
+                new Dictionary<PlayerAttackDefinition, PlayerAttackDefinition>();
         private bool completion, comboOpen, comboQueued, branch, cancelOpen, committed, recovering;
         private bool invulnerable;
         private float dodgeRemaining;
@@ -51,8 +79,24 @@ namespace PirateGame.PlayerV2
         private bool drawTarget;
         private Vector3 dodgeDirection, attackDirection;
         public bool IsFree => Kind == PlayerActionKind.Free;
-        public bool RootTranslation => Kind == PlayerActionKind.Attack && !recovering &&
-            attack.Definition.layer == 1 && attack.Definition.useRootTranslation && Animation.ActionEntered;
+        public uint AttackSerial { get; private set; }
+        public bool IsAttackAnimationVisible => Ready &&
+            Kind == PlayerActionKind.Attack && !recovering && !completion &&
+            Animation != null && Animation.ActionEntered && !Animation.Faulted;
+        public bool IsInAttackWindup => IsAttackAnimationVisible && !committed;
+        public bool IsInAttackRecovery => Ready &&
+            Kind == PlayerActionKind.Attack && recovering;
+        private bool UsesAttackRootTranslation =>
+            Kind == PlayerActionKind.Attack &&
+            attack != null &&
+            attack.Definition.layer == 1 &&
+            attack.Definition.useRootTranslation;
+
+        public bool RootTranslation =>
+            UsesAttackRootTranslation &&
+            !recovering &&
+            !completion &&
+            Animation.ActionEntered;
         public bool ScriptedMotion => Kind == PlayerActionKind.Dodge;
         public Vector3 ConsumeActionVelocity(float dt)
         {
@@ -61,18 +105,52 @@ namespace PirateGame.PlayerV2
             dodgeRemaining -= distance;
             return dodgeDirection * (distance / dt);
         }
-        public bool RotateWithMovement => Kind == PlayerActionKind.Free || Kind == PlayerActionKind.Equip;
-        public float MovementScale => Kind == PlayerActionKind.Attack ? attack.Definition.movementScale :
-            Kind == PlayerActionKind.Block ? 0.3f : Kind == PlayerActionKind.Stagger ? 0.15f :
-            Kind == PlayerActionKind.Dead ? 0f : 1f;
-        public int VisualLayer => recovering ? -1 : Kind == PlayerActionKind.Attack ? attack.Definition.layer :
-            Kind == PlayerActionKind.Block ? 2 : Kind == PlayerActionKind.Equip ? 2 :
-            Kind == PlayerActionKind.Stagger ? 3 : Kind == PlayerActionKind.Dodge ? 0 : -1;
+        public bool RotateWithMovement =>
+            Kind == PlayerActionKind.Free ||
+            Kind == PlayerActionKind.Equip ||
+            Kind == PlayerActionKind.Heal ||
+            (UsesAttackRootTranslation && recovering);
+        public float MovementScale =>
+            Kind == PlayerActionKind.Heal ? Potion.movementScale :
+
+            Kind == PlayerActionKind.Attack
+                ? (UsesAttackRootTranslation
+                    ? (recovering ? 1f : 0f)
+                    : attack.Definition.movementScale) :
+
+            Kind == PlayerActionKind.Block ? 0.3f :
+
+            Kind == PlayerActionKind.Stagger
+                ? (selectedHurtLayer == 0 ? 0f : 0.15f) :
+
+            Kind == PlayerActionKind.Dead ? 0f :
+
+            1f;
+        public int VisualLayer =>
+            Kind == PlayerActionKind.Heal ? 2 :
+            recovering ? -1 :
+            Kind == PlayerActionKind.Attack ? attack.Definition.layer :
+            Kind == PlayerActionKind.Block ? 2 :
+            Kind == PlayerActionKind.Equip ? 2 :
+            Kind == PlayerActionKind.Stagger ? selectedHurtLayer :
+            Kind == PlayerActionKind.Dodge ? 0 :
+            -1;
         public bool Initialize()
         {
             health = GetComponent<Health>(); Input = GetComponent<PlayerInputReader>(); Motor = GetComponent<PlayerMotor>();
             Animation = GetComponent<PlayerAnimationDriver>(); Weapon = GetComponent<PlayerWeaponBridge>();
             attackAim = GetComponent<PlayerAttackAim>();
+            Potion = GetComponent<PlayerPotion>();
+
+            if (Potion == null ||
+                !Animation.HasState(2, Potion.fullStatePath))
+            {
+                Debug.LogError(
+                    "Add PlayerPotion and its Arms Layer drinking state.",
+                    this);
+
+                return false;
+            }
             if (lightAttack == null || !ValidateAttack(lightAttack) || !ValidateAttack(specialAttack) ||
                 !ValidateAttack(thrustAttack) || !ValidateAttack(specialAttack2)) return false;
             string[] paths = { "Base Layer.Combat_Roll", "Arms Layer.Combat_Defense", "Damage Layer.Player_Damage",
@@ -83,21 +161,131 @@ namespace PirateGame.PlayerV2
                 int layer = path.StartsWith("Base") ? 0 : path.StartsWith("Combat") ? 1 : path.StartsWith("Arms") ? 2 : 3;
                 if (!Animation.HasState(layer, path)) { Debug.LogError("Missing action state: " + path, this); return false; }
             }
-            Machine = new PlayerStateMachine(); Free = new PlayerFreeState(this); Dodge = new PlayerDodgeState(this);
+            Machine = new PlayerStateMachine();
+            if (hurtAnimations != null)
+            {
+                foreach (HitReactionAnimation entry in hurtAnimations)
+                {
+                    if (entry == null || !entry.knockdown)
+                        continue;
+
+                    if (!entry.fullBody ||
+                        string.IsNullOrWhiteSpace(entry.fullStatePath) ||
+                        string.IsNullOrWhiteSpace(entry.getUpStatePath) ||
+                        !Animation.HasState(0, entry.fullStatePath) ||
+                        !Animation.HasState(0, entry.getUpStatePath))
+                    {
+                        Debug.LogError(
+                            "Knockdown setup is incomplete. Enable Full Body " +
+                            "and check both Base Layer state paths.",
+                            this);
+
+                        return false;
+                    }
+                }
+            }
+            Free = new PlayerFreeState(this); Dodge = new PlayerDodgeState(this);
             Block = new PlayerBlockState(this); Equip = new PlayerEquipState(this); Stagger = new PlayerStaggerState(this); Dead = new PlayerDeadState(this);
+            Healing = new PlayerHealState(this);
             Ready = true; health.InstallDamageFilter(this);
             health.OnDamaged += Damaged; health.OnDeath += Died; health.OnRevived += Revived;
             Machine.Initialize(health.IsDead ? (PlayerState)Dead : Free); return true;
         }
         private bool ValidateAttack(PlayerAttackDefinition first)
         {
+            if (first == null)
+                return true;
+
             var visited = new HashSet<PlayerAttackDefinition>();
-            for (var a = first; a != null && visited.Add(a); a = a.followup)
+            var pending = new Stack<PlayerAttackDefinition>();
+
+            pending.Push(first);
+
+            bool AddLink(
+                PlayerAttackDefinition from,
+                PlayerAttackDefinition next)
             {
-                if (a.layer < 1 || a.layer > 2 || !Animation.HasState(a.layer, a.fullStatePath) ||
-                    a.followup == a || (a.followup != null && a.followup.fullStatePath == a.fullStatePath))
-                { Debug.LogError("Invalid attack/followup contract: " + a.name, this); return false; }
+                if (next == null ||
+                    next == from ||
+                    next.fullStatePath == from.fullStatePath)
+                {
+                    Debug.LogError(
+                        "Invalid follow-up on: " + from.name,
+                        this);
+
+                    return false;
+                }
+
+                pending.Push(next);
+                return true;
             }
+
+            while (pending.Count > 0)
+            {
+                var current = pending.Pop();
+
+                if (!visited.Add(current))
+                    continue;
+
+                if (current.layer < 1 ||
+                    current.layer > 2 ||
+                    string.IsNullOrWhiteSpace(current.fullStatePath) ||
+                    !Animation.HasState(current.layer, current.fullStatePath) ||
+                    (current.useRootTranslation && current.layer != 1))
+                {
+                    Debug.LogError(
+                        "Invalid attack state/layer: " + current.name,
+                        this);
+
+                    return false;
+                }
+
+                if (!current.UsesWeightedFollowups)
+                {
+                    if (current.followup != null &&
+                        !AddLink(current, current.followup))
+                    {
+                        return false;
+                    }
+
+                    continue;
+                }
+
+                var targets = new HashSet<PlayerAttackDefinition>();
+
+                foreach (var option in current.weightedFollowups)
+                {
+                    if (option == null)
+                        continue;
+
+                    if (float.IsNaN(option.weight) ||
+                        float.IsInfinity(option.weight) ||
+                        option.weight < 0f)
+                    {
+                        Debug.LogError(
+                            "Invalid follow-up weight on: " + current.name,
+                            this);
+
+                        return false;
+                    }
+
+                    if (option.weight == 0f)
+                        continue;
+
+                    if (!AddLink(current, option.attack))
+                        return false;
+
+                    if (!targets.Add(option.attack))
+                    {
+                        Debug.LogError(
+                            "Duplicate follow-up on: " + current.name,
+                            this);
+
+                        return false;
+                    }
+                }
+            }
+
             return true;
         }
         public void Tick(float dt)
@@ -105,17 +293,27 @@ namespace PirateGame.PlayerV2
             if (!Ready) return;
             age += dt * Animation.PlaybackScale;
             if (Kind != PlayerActionKind.Dead && !Motor.Grounded &&
-                (Kind == PlayerActionKind.Attack || Kind == PlayerActionKind.Block || Kind == PlayerActionKind.Equip))
+                (Kind == PlayerActionKind.Attack ||
+                Kind == PlayerActionKind.Block ||
+                Kind == PlayerActionKind.Equip ||
+                Kind == PlayerActionKind.Heal))
                 Machine.Force(Free); // Ground-only actions do not keep dealing damage while falling.
             if (invulnerable && age - invulnerableStarted >= maximumInvulnerableSeconds) invulnerable = false;
             Machine.Tick(dt);
         }
         public void Enter(PlayerActionKind kind)
         {
+            if (kind != PlayerActionKind.Stagger)
+                knockdownActive = false;
+            queuedFollowup = null;
             Kind = kind; age = 0f; completion = comboOpen = comboQueued = branch = cancelOpen = committed = recovering = invulnerable = false;
         }
         public void Cleanup()
         {
+            queuedFollowup = null;
+            comboQueued = false;
+            if (Potion != null)
+                Potion.EndDrink();
             Weapon.CancelAttackTracking();
 
             if (attackAim != null)
@@ -130,6 +328,13 @@ namespace PirateGame.PlayerV2
             if (!Motor.CanUseGroundAction) return;
             if (Input.Has(PlayerCommand.Roll) && Time.time >= nextDodgeTime)
             { Input.Consume(PlayerCommand.Roll); Machine.Request(Dodge, 70); return; }
+            if (Input.Consume(PlayerCommand.Heal))
+            {
+                if (!Motor.Crouched && Potion.CanUse)
+                    Machine.Request(Healing, 45);
+
+                return;
+            }
             if (Weapon.Drawn)
             {
                 if (TryAttack(PlayerCommand.Special2, specialAttack2) || TryAttack(PlayerCommand.Thrust, thrustAttack) ||
@@ -147,16 +352,72 @@ namespace PirateGame.PlayerV2
         {
             Machine.Request(new PlayerAttackState(this, definition), 50);
         }
+        public void ApplyAttackRootMotion(Vector3 delta)
+        {
+            if (!RootTranslation ||
+                attack == null ||
+                Motor.HasKnockback)
+            {
+                return;
+            }
+
+            // The motor handles gravity separately.
+            delta.y = 0f;
+
+            if (attack.Definition.forceForwardRootMotion)
+            {
+                Vector3 forward = transform.forward;
+                forward.y = 0f;
+
+                if (forward.sqrMagnitude < 0.0001f)
+                    return;
+
+                // Keep this frame's movement amount,
+                // but send it along the player's forward direction.
+                delta = forward.normalized * delta.magnitude;
+            }
+
+            Motor.ApplyRootTranslation(delta);
+        }
         public void BeginAttack(PlayerAttackState state)
         {
             attack = state;
+            unchecked
+            {
+                AttackSerial++;
+            }
+
+            if (AttackSerial == 0)
+            {
+                AttackSerial = 1;
+            }
+            if (UsesAttackRootTranslation)
+                Motor.StopHorizontalMotion();
             Weapon.BeginAttackTracking();
+    //         Debug.Log(
+    // $"PLAYER ATTACK START | Serial={AttackSerial}",
+    // this);
             attackDirection = Motor.CameraDirection(Vector2.up).normalized;
             if (attackAim != null && attackAim.isActiveAndEnabled)
                 attackDirection = attackAim.BeginAttack();
             else
                 Motor.Face(attackDirection, 360f, 1f);
             Animation.Begin(state.Definition.layer, state.Definition.fullStatePath);
+            Vector3 rayStart = transform.position + Vector3.up;
+
+            // Green: camera direction.
+            Debug.DrawRay(
+                rayStart,
+                Motor.CameraDirection(Vector2.up).normalized * 2f,
+                Color.green,
+                2f);
+
+            // Blue: player root direction.
+            Debug.DrawRay(
+                rayStart,
+                transform.forward * 1.5f,
+                Color.blue,
+                2f);
         }
         public void TickAttack(float dt)
         {
@@ -173,8 +434,20 @@ namespace PirateGame.PlayerV2
             if (branch)
             {
                 branch = false;
-                if (comboQueued && attack.Definition.followup != null)
-                { RequestAttack(attack.Definition.followup); return; }
+
+                if (!recovering &&
+                    !completion &&
+                    !Animation.Faulted &&
+                    comboQueued &&
+                    queuedFollowup != null)
+                {
+                    var next = queuedFollowup;
+
+                    lastFollowups[attack.Definition] = next;
+
+                    RequestAttack(next);
+                    return;
+                }
             }
             if (!recovering &&
                 (completion ||
@@ -229,6 +502,16 @@ namespace PirateGame.PlayerV2
         {
             if (Input.Has(PlayerCommand.Roll) && Time.time >= nextDodgeTime)
             { Input.Consume(PlayerCommand.Roll); Machine.Request(Dodge, 70); return; }
+            if (Motor.CanUseGroundAction && Weapon.Drawn)
+            {
+                if (TryAttack(PlayerCommand.Special2, specialAttack2) ||
+                    TryAttack(PlayerCommand.Thrust, thrustAttack) ||
+                    TryAttack(PlayerCommand.Special, specialAttack) ||
+                    TryAttack(PlayerCommand.Light, lightAttack))
+                {
+                    return;
+                }
+            }
             if (!Input.Block) Machine.Request(Free, 10);
         }
         public void BeginEquip()
@@ -264,7 +547,9 @@ namespace PirateGame.PlayerV2
             {
                 if (entry == null ||
                     string.IsNullOrWhiteSpace(entry.fullStatePath) ||
-                    !Animation.HasState(3, entry.fullStatePath))
+                    !Animation.HasState(
+                    entry.fullBody ? 0 : 3,
+                    entry.fullStatePath))
                 {
                     continue;
                 }
@@ -281,15 +566,173 @@ namespace PirateGame.PlayerV2
         public void BeginStagger()
         {
             Input.Clear();
-            Animation.Begin(3, selectedHurtPath);
+
+            if (selectedHurtLayer == 0)
+                Motor.StopHorizontalMotion();
+
+            completion = false;
+            age = 0f;
+
+            knockdownStage = KnockdownStage.Falling;
+
+            Animation.Begin(selectedHurtLayer, selectedHurtPath);
         }
+
         public void TickStagger()
         {
-            if (completion ||
-                Animation.Faulted ||
-                age >= selectedHurtWatchdog)
+            // Keep the normal hurt-animation behaviour.
+            if (!knockdownActive)
+            {
+                if (completion ||
+                    Animation.Faulted ||
+                    age >= selectedHurtWatchdog)
+                {
+                    Machine.Request(Free, 10);
+                }
+
+                return;
+            }
+
+            // Do not save attack, roll, or jump presses while knocked down.
+            Input.Clear();
+
+            switch (knockdownStage)
+            {
+                case KnockdownStage.Falling:
+                    {
+                        bool finished = Animation.ActionFinished;
+
+                        bool failed =
+                            Animation.Faulted ||
+                            age >= selectedHurtWatchdog;
+
+                        if (!finished && !failed)
+                            return;
+
+                        if (failed && !finished)
+                        {
+                            Debug.LogWarning(
+                                "Knockdown animation timed out or exited early. " +
+                                "Check its state, behaviour, and timeout.",
+                                this);
+                        }
+
+                        // A non-looping clip holds its last lying pose.
+                        knockdownStage = KnockdownStage.Waiting;
+                        completion = false;
+                        age = 0f;
+                        return;
+                    }
+
+                case KnockdownStage.Waiting:
+                    {
+                        if (age < Mathf.Max(0f, selectedHurt.downSeconds))
+                            return;
+
+                        knockdownStage = KnockdownStage.GettingUp;
+                        completion = false;
+                        age = 0f;
+
+                        Animation.Begin(0, selectedHurt.getUpStatePath);
+                        return;
+                    }
+
+                case KnockdownStage.GettingUp:
+                    {
+                        bool finished = Animation.ActionFinished;
+
+                        bool failed =
+                            Animation.Faulted ||
+                            age >= Mathf.Max(
+                                0.2f,
+                                selectedHurt.getUpWatchdogSeconds);
+
+                        if (!finished && !failed)
+                            return;
+
+                        if (failed && !finished)
+                        {
+                            Debug.LogWarning(
+                                "Getting-up animation timed out or exited early. " +
+                                "Check its state, behaviour, and timeout.",
+                                this);
+                        }
+
+                        Input.Clear();
+                        Machine.Request(Free, 10);
+                        return;
+                    }
+            }
+        }
+        public void BeginHeal()
+        {
+            Input.Clear();
+
+            if (Motor.Crouched ||
+                !Motor.CanUseGroundAction ||
+                !Potion.BeginDrink())
             {
                 Machine.Request(Free, 10);
+                return;
+            }
+
+            Animation.Begin(2, Potion.fullStatePath);
+        }
+
+        public void TickHeal()
+        {
+            if (Potion == null || !Potion.IsDrinking)
+            {
+                Machine.Request(Free, 10);
+                return;
+            }
+
+            if (Animation.ActionEntered)
+                Potion.ShowWhenAnimationEntered();
+
+            // Rolling cancels drinking.
+            if (Input.Has(PlayerCommand.Roll) &&
+                Time.time >= nextDodgeTime)
+            {
+                Input.Consume(PlayerCommand.Roll);
+                Machine.Request(Dodge, 70);
+                return;
+            }
+
+            Input.ClearAttacks();
+
+            if (completion ||
+                Animation.Faulted ||
+                age >= Potion.watchdogSeconds)
+            {
+                if (!completion)
+                {
+                    Debug.LogWarning(
+                        "Potion action ended through its safety check. " +
+                        "Check AE_ActionComplete and the Animator state.",
+                        this);
+                }
+
+                Machine.Request(Free, 10);
+            }
+        }
+        public void EventPotionGrab()
+        {
+            if (Kind == PlayerActionKind.Heal &&
+                !completion &&
+                Potion != null)
+            {
+                Potion.GrabBottle();
+            }
+        }
+
+        public void EventPotionSip()
+        {
+            if (Kind == PlayerActionKind.Heal &&
+                !completion &&
+                Potion != null)
+            {
+                Potion.TrySip();
             }
         }
         public void BeginDead() { Input.SetGameplayEnabled(false); Input.Clear(); Motor.ResetMotion(); onDied.Invoke(); }
@@ -317,7 +760,27 @@ namespace PirateGame.PlayerV2
         }
         private void CaptureCombo()
         {
-            if (attack.Definition.followup != null && !comboQueued && Input.Consume(PlayerCommand.Light)) comboQueued = true;
+            if (Kind != PlayerActionKind.Attack ||
+                attack == null ||
+                recovering ||
+                completion ||
+                comboQueued ||
+                !attack.Definition.HasFollowup)
+            {
+                return;
+            }
+
+            if (!Input.Consume(PlayerCommand.Light))
+                return;
+
+            lastFollowups.TryGetValue(
+                attack.Definition,
+                out var previous);
+
+            queuedFollowup =
+                attack.Definition.PickFollowup(previous);
+
+            comboQueued = queuedFollowup != null;
         }
         public void EventBranch() { if (Kind == PlayerActionKind.Attack && !recovering) branch = true; }
         public void EventCancel(bool open) { if (Kind == PlayerActionKind.Attack && !recovering) cancelOpen = open; }
@@ -331,14 +794,38 @@ namespace PirateGame.PlayerV2
         {
             if (!Ready || !isActiveAndEnabled) return true;
             if (Kind == PlayerActionKind.Dead) return false;
+            // Protect the player throughout falling, waiting, and getting up.
+            if (knockdownActive)
+                return false;
             if (Kind == PlayerActionKind.Dodge && invulnerable) { onDodged.Invoke(); return false; }
-            if (Kind == PlayerActionKind.Block && info.Attacker != null)
+            if (Kind == PlayerActionKind.Block &&
+                (info.HasImpactOrigin || info.Attacker != null))
             {
-                Vector3 direction = info.Attacker.transform.position - transform.position; direction.y = 0f;
+                Vector3 source = info.HasImpactOrigin
+                ? info.ImpactOrigin
+                : info.Attacker.transform.position;
+
+                Vector3 direction = source - transform.position;
+                direction.y = 0f;
                 if (direction.sqrMagnitude > 0.001f && Vector3.Angle(transform.forward, direction) <= blockHalfAngle)
                 {
-                    info.Amount *= blockedDamageFraction; info.WasBlocked = true;
-                    Animation.BlockImpact(); onBlocked.Invoke(); return info.Amount > 0f;
+                    float push = info.HasBlockedKnockback
+                        ? info.BlockedKnockbackDistance
+                        : info.KnockbackDistance * 0.25f;
+                    float seconds = info.HasBlockedKnockback
+                        ? info.BlockedKnockbackSeconds
+                        : info.KnockbackSeconds;
+                    if (push > 0f)
+                    {
+                        Vector3 away = info.KnockbackDirection;
+                        if (away.sqrMagnitude < 0.0001f) away = -direction;
+                        Motor.ApplyKnockback(away, push, Mathf.Max(0.05f, seconds));
+                    }
+                    info.Amount *= blockedDamageFraction;
+                    info.WasBlocked = true;
+                    Animation.BlockImpact();
+                    onBlocked.Invoke();
+                    return info.Amount > 0f;
                 }
             }
             return true;
@@ -350,38 +837,68 @@ namespace PirateGame.PlayerV2
 
             onConfirmedDamage.Invoke();
 
-            if (health.IsDead ||
-                Kind == PlayerActionKind.Dead ||
-                Kind == PlayerActionKind.Stagger)
-            {
+            if (health.IsDead || Kind == PlayerActionKind.Dead)
                 return;
+
+            if (info.KnockbackDistance > 0f)
+            {
+                Motor.ApplyKnockback(
+                    info.KnockbackDirection,
+                    info.KnockbackDistance,
+                    info.KnockbackSeconds);
             }
 
             HitReactionAnimation reaction =
                 FindHurtAnimation(info.Reaction);
 
+            int layer =
+                reaction != null && reaction.fullBody ? 0 : 3;
+
             string path = reaction != null
                 ? reaction.fullStatePath
                 : "Damage Layer.Player_Damage";
 
-            if (info.ReactionMode == HitReactionMode.Flinch)
+            // Avoid repeatedly restarting an existing hurt animation.
+            // A full-body hit can upgrade an upper-body reaction.
+            if (Kind == PlayerActionKind.Stagger &&
+                (layer != 0 || selectedHurtLayer == 0))
             {
-                float duration = reaction != null
-                    ? reaction.flinchSeconds
-                    : 0.3f;
-
-                Animation.HurtImpact(path, duration);
                 return;
             }
 
+            if (info.ReactionMode == HitReactionMode.Flinch &&
+                layer == 3 &&
+                Kind != PlayerActionKind.Stagger &&
+                Kind != PlayerActionKind.Heal)
+            {
+                Animation.HurtImpact(
+                    path,
+                    reaction != null ? reaction.flinchSeconds : 0.3f);
+
+                return;
+            }
+
+            selectedHurtLayer = layer;
             selectedHurtPath = path;
+            selectedHurt = reaction;
+            knockdownActive = reaction != null && reaction.knockdown;
 
             selectedHurtWatchdog = reaction != null
                 ? Mathf.Max(0.2f, reaction.watchdogSeconds)
                 : Mathf.Max(0.2f, staggerWatchdog);
 
             Cleanup();
-            Machine.Request(Stagger, 90);
+
+            if (Kind == PlayerActionKind.Stagger)
+            {
+                age = 0f;
+                completion = false;
+                BeginStagger();
+            }
+            else
+            {
+                Machine.Request(Stagger, 90);
+            }
         }
         private void Died()
         {

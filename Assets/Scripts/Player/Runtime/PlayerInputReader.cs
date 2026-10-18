@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 namespace PirateGame.PlayerV2
 {
-    public enum PlayerCommand { Jump, Roll, Crouch, Equip, Light, Special, Thrust, Special2, Count }
+    public enum PlayerCommand { Jump, Roll, Crouch, Equip, Light, Special, Thrust, Special2, Heal, Count }
     [DefaultExecutionOrder(100), RequireComponent(typeof(PlayerInput))]
     public sealed class PlayerInputReader : MonoBehaviour
     {
@@ -16,18 +16,28 @@ namespace PirateGame.PlayerV2
         private readonly bool[] pending = new bool[(int)PlayerCommand.Count];
         private bool bound, acceptsGameplay = true;
         public Vector2 Move => Ready ? Vector2.ClampMagnitude(move.ReadValue<Vector2>(), 1f) : Vector2.zero;
-        public bool Sprint => Ready && sprint.IsPressed();
-        public bool Block => Ready && block.IsPressed();
+        public bool GameplayEnabled => acceptsGameplay;
+
+        public bool Sprint =>
+            Ready &&
+            sprint.IsPressed() &&
+            !ActionClaimedByChord(sprint);
+
+        public bool Block =>
+            Ready &&
+            block.IsPressed() &&
+            !ActionClaimedByChord(block);
         private bool Ready => bound && acceptsGameplay && isActiveAndEnabled && gameplay.enabled;
         private void OnEnable()
         {
             var asset = GetComponent<PlayerInput>().actions; // Read THIS player's instance, not a second wrapper.
+            PlayerControlsMenu.LoadSavedBindings(asset);
             gameplay = asset.FindActionMap("Player", true);
             cameraMap = asset.FindActionMap("CameraControls", true);
             move = gameplay.FindAction("Move", true);
             sprint = gameplay.FindAction("Sprint", true);
             block = gameplay.FindAction("Defense", true);
-            string[] names = { "Jump", "Roll", "Crouch", "DrawWeapon", "Attack", "SpecialAttack", "ThrustAttack", "SpecialAttack2" };
+            string[] names = { "Jump", "Roll", "Crouch", "DrawWeapon", "Attack", "SpecialAttack", "ThrustAttack", "SpecialAttack2", "UsePotion" };
             buttons = new InputAction[names.Length]; callbacks = new Action<InputAction.CallbackContext>[names.Length];
             for (int i = 0; i < names.Length; i++)
             {
@@ -70,6 +80,82 @@ namespace PirateGame.PlayerV2
                 pending[(int)PlayerCommand.Thrust] = pending[(int)PlayerCommand.Special2] = false;
         }
         public void Clear() { Array.Clear(pending, 0, pending.Length); }
+        private bool HasComposite(InputAction action)
+        {
+            foreach (InputBinding binding in action.bindings)
+            {
+                if (binding.isComposite)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool ActionClaimedByChord(InputAction plainAction)
+        {
+            if (buttons == null)
+                return false;
+
+            foreach (InputAction chord in buttons)
+            {
+                if (!HasComposite(chord) ||
+                    (!chord.IsPressed() &&
+                     !chord.WasPerformedThisFrame()))
+                {
+                    continue;
+                }
+
+                foreach (InputBinding part in chord.bindings)
+                {
+                    bool mainButton =
+                        string.Equals(
+                            part.name,
+                            "binding",
+                            StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(
+                            part.name,
+                            "button",
+                            StringComparison.OrdinalIgnoreCase);
+
+                    if (!part.isPartOfComposite ||
+                        !mainButton ||
+                        string.IsNullOrEmpty(part.effectivePath))
+                    {
+                        continue;
+                    }
+
+                    foreach (InputControl control in plainAction.controls)
+                    {
+                        if (InputControlPath.Matches(
+                            part.effectivePath,
+                            control))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private void Update()
+        {
+            if (!Ready)
+                return;
+
+            // Input callbacks have finished before we resolve overlaps.
+            // PlayerControllerV2 reads the result afterward.
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                if (pending[i] &&
+                    !HasComposite(buttons[i]) &&
+                    ActionClaimedByChord(buttons[i]))
+                {
+                    pending[i] = false;
+                }
+            }
+        }
         private void OnApplicationFocus(bool focus) { if (!focus) Clear(); }
     }
 }

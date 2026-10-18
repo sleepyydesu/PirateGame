@@ -27,6 +27,33 @@ namespace PirateGame.Enemies
         public bool useRootMotion;
         [Header("Jump slam")]
         public bool jumpSlam;
+        [Header("Landing ground burst")]
+        public bool useGroundBurst;
+        [Header("Ground burst triggered by a combo event")]
+        [Min(0f)]
+        public float comboBurstDamage = 15f;
+
+        public HitReactionType comboBurstReaction =
+            HitReactionType.GroundSlam;
+
+        public HitReactionMode comboBurstReactionMode =
+            HitReactionMode.Stagger;
+        public GameObject groundBurstVfx;
+
+        [Min(0.1f)]
+        public float groundBurstRadius = 3f;
+
+        [Min(0.05f)]
+        public float groundBurstHeight = 1.2f;
+
+        [Min(0f)]
+        public float knockbackDistance = 1f;
+
+        [Min(0.05f)]
+        public float knockbackSeconds = 0.25f;
+
+        [Min(0.1f)]
+        public float groundBurstVfxLifetime = 3f;
         [Tooltip("Adjusts the direction of the jump attack's weapon strike.")]
         [Range(-45f, 45f)]
         public float jumpFacingOffsetDegrees = 0f;
@@ -67,6 +94,34 @@ namespace PirateGame.Enemies
         public CaptainAttack followup;
         [Range(0f, 1f)] public float phase1ChainChance = 0.15f;
         [Range(0f, 1f)] public float phase2ChainChance = 0.45f;
+        [System.Serializable]
+        public sealed class MeleeHitSettings
+        {
+            public bool overrideDamage;
+            [Min(0f)] public float damage = 20f;
+            public bool overrideReaction;
+            public HitReactionType reaction = HitReactionType.Default;
+            public HitReactionMode reactionMode = HitReactionMode.Flinch;
+            [Min(0f)] public float pushDistance = 0.2f;
+            [Min(0.05f)] public float pushSeconds = 0.12f;
+            [Min(0f)] public float blockedPushDistance = 0.1f;
+            [Min(0.05f)] public float blockedPushSeconds = 0.12f;
+        }
+
+        [Header("Sword-hit push - separate from ground burst")]
+        [Min(0f)] public float meleePushDistance;
+        [Min(0.05f)] public float meleePushSeconds = 0.12f;
+        [Min(0f)] public float blockedMeleePushDistance;
+        [Min(0.05f)] public float blockedMeleePushSeconds = 0.12f;
+        [Tooltip("AE_HitboxOn Int 0 = defaults above; Int 1 = element 0; Int 2 = element 1, etc.")]
+        public MeleeHitSettings[] meleeHitOverrides = new MeleeHitSettings[0];
+
+        public MeleeHitSettings GetMeleeHit(int eventIndex)
+        {
+            int index = eventIndex - 1;
+            return meleeHitOverrides != null && index >= 0 && index < meleeHitOverrides.Length
+                ? meleeHitOverrides[index] : null;
+        }
         // No runtime counters live in this asset: multiple bosses may share it safely.
     }
 }
