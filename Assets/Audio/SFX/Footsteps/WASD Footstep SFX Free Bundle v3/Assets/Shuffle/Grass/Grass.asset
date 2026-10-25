@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c4d70950e1342e4abb96346ce6c06c8, type: 3}
+  m_Name: Grass
+  m_EditorClassIdentifier: 
+  clips:
+  - {fileID: 8300000, guid: 3c8bdfce8118d684dabfea513a8aff63, type: 3}
+  - {fileID: 8300000, guid: f80b29b8eb3c1434d90d2d18d4516ed3, type: 3}
+  - {fileID: 8300000, guid: 53f27dc0b7d620c4b8862cb70c7f338f, type: 3}
+  - {fileID: 8300000, guid: dab018e001c806246a870add2bece104, type: 3}
+  - {fileID: 8300000, guid: 034ac2a65e09c63458a82742dbadb3dc, type: 3}
+  - {fileID: 8300000, guid: a1fa6a4fcc95852498ff31c00477371f, type: 3}
+  materialActions: []

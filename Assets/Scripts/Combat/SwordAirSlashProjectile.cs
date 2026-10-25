@@ -33,7 +33,9 @@ namespace PirateGame.Combat
             float launchSpeed,
             float amount,
             HitReactionType hitType,
-            HitReactionMode hitMode)
+            HitReactionMode hitMode,
+            AudioClip flightSound = null,
+            float flightSoundVolume = 1f)
         {
             if (launched || heading.sqrMagnitude < 0.0001f)
             {
@@ -54,6 +56,21 @@ namespace PirateGame.Combat
 
             launched = true;
             CheckStartingOverlap();
+
+            if (!finished && flightSound != null)
+            {
+                AudioSource source = gameObject.AddComponent<AudioSource>();
+                source.playOnAwake = false;
+                source.loop = false;
+                source.spatialBlend = 1f;
+                source.dopplerLevel = 0f;
+                source.rolloffMode = AudioRolloffMode.Logarithmic;
+                source.minDistance = 1f;
+                source.maxDistance = 30f;
+                source.volume = Mathf.Clamp01(flightSoundVolume);
+                source.clip = flightSound;
+                source.Play();
+            }
 
             if (!finished && mainVisual != null)
                 mainVisual.Play(true);

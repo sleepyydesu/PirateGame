@@ -21,7 +21,7 @@ MonoBehaviour:
   phase1Weight: 1
   phase2Weight: 1
   cooldown: 3
-  damage: 5
+  damage: 20
   fatigueCost: 25
   guaranteedRecovery: 0.7
   trackingDegreesPerSecond: 100
@@ -54,5 +54,11 @@ MonoBehaviour:
   parryable: 1
   punishHealing: 0
   followup: {fileID: 0}
+  spell: {fileID: 0}
   phase1ChainChance: 0.15
   phase2ChainChance: 0.45
+  meleePushDistance: 0
+  meleePushSeconds: 0.12
+  blockedMeleePushDistance: 0
+  blockedMeleePushSeconds: 0.12
+  meleeHitOverrides: []

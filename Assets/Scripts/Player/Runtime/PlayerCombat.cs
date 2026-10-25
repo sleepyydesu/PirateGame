@@ -43,6 +43,14 @@ namespace PirateGame.PlayerV2
         }
 
         private HitReactionAnimation selectedHurt;
+        [Header("Knockdown protection")]
+        public bool invulnerableWhileFalling = true;
+        public bool invulnerableWhileDown = true;
+
+        [Min(0f)]
+        public float getUpInvulnerableSeconds = 0f;
+
+        private float getUpInvulnerableUntil = float.NegativeInfinity;
         private bool knockdownActive;
         private KnockdownStage knockdownStage;
         [Header("Attack results")]
@@ -394,9 +402,9 @@ namespace PirateGame.PlayerV2
             if (UsesAttackRootTranslation)
                 Motor.StopHorizontalMotion();
             Weapon.BeginAttackTracking();
-    //         Debug.Log(
-    // $"PLAYER ATTACK START | Serial={AttackSerial}",
-    // this);
+            //         Debug.Log(
+            // $"PLAYER ATTACK START | Serial={AttackSerial}",
+            // this);
             attackDirection = Motor.CameraDirection(Vector2.up).normalized;
             if (attackAim != null && attackAim.isActiveAndEnabled)
                 attackDirection = attackAim.BeginAttack();
@@ -449,6 +457,8 @@ namespace PirateGame.PlayerV2
                     return;
                 }
             }
+            if (!completion && Animation.ActionFinished)
+                EventComplete();
             if (!recovering &&
                 (completion ||
                 Animation.Faulted ||
@@ -464,7 +474,8 @@ namespace PirateGame.PlayerV2
                 {
                     Debug.LogWarning(
                         "Attack event/state contract failed: " +
-                        attack.Definition.name,
+                        attack.Definition.name + "\n" +
+                        Animation.DescribeActionState(),
                         this);
                 }
 
@@ -574,6 +585,7 @@ namespace PirateGame.PlayerV2
             age = 0f;
 
             knockdownStage = KnockdownStage.Falling;
+            getUpInvulnerableUntil = float.NegativeInfinity;
 
             Animation.Begin(selectedHurtLayer, selectedHurtPath);
         }
@@ -630,6 +642,10 @@ namespace PirateGame.PlayerV2
                             return;
 
                         knockdownStage = KnockdownStage.GettingUp;
+
+                        getUpInvulnerableUntil = Time.time +
+                            Mathf.Max(0f, getUpInvulnerableSeconds);
+
                         completion = false;
                         age = 0f;
 
@@ -795,8 +811,26 @@ namespace PirateGame.PlayerV2
             if (!Ready || !isActiveAndEnabled) return true;
             if (Kind == PlayerActionKind.Dead) return false;
             // Protect the player throughout falling, waiting, and getting up.
-            if (knockdownActive)
-                return false;
+            if (knockdownActive && Kind == PlayerActionKind.Stagger)
+            {
+                if (knockdownStage == KnockdownStage.Falling &&
+                    invulnerableWhileFalling)
+                {
+                    return false;
+                }
+
+                if (knockdownStage == KnockdownStage.Waiting &&
+                    invulnerableWhileDown)
+                {
+                    return false;
+                }
+
+                if (knockdownStage == KnockdownStage.GettingUp &&
+                    Time.time < getUpInvulnerableUntil)
+                {
+                    return false;
+                }
+            }
             if (Kind == PlayerActionKind.Dodge && invulnerable) { onDodged.Invoke(); return false; }
             if (Kind == PlayerActionKind.Block &&
                 (info.HasImpactOrigin || info.Attacker != null))

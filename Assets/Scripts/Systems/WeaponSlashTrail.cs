@@ -1,109 +1,178 @@
 using UnityEngine;
 
 /// <summary>
-/// Gives any character the same procedural slash ribbon the player's sword
-/// uses, without the player-specific equipment logic.
-///
-/// SETUP:
-///   1. Add this component to the SAME GameObject that has the character's
-///      Animator (animation events only reach components on that object).
-///   2. Assign Blade Base / Blade Tip — two transforms that span the cutting
-///      edge (wrist→claws for unarmed attacks, hilt→tip for a sword).
-///      Left empty, they are searched for by child name using the player
-///      sword's convention ("SwordTrailPoint" / "SlashSpawnPoint"), so a
-///      shared weapon prefab works with zero extra wiring.
-///   3. On each attack clip (FBX import settings → Animation tab → Events),
-///      add an event calling Begin() where the swing starts and one calling
-///      End() where the cut finishes.
-///
-/// If an attack is interrupted (parry, stagger, death) the clip's End event
-/// never fires — <see cref="maxEmissionTime"/> stops the ribbon automatically
-/// so it can't get stuck on.
+/// Boss/enemy connector for the shared procedural SwordSlashRibbon renderer.
 /// </summary>
-public class WeaponSlashTrail : MonoBehaviour
+[DisallowMultipleComponent]
+public sealed class WeaponSlashTrail : MonoBehaviour
 {
     [Header("Blade points")]
     [SerializeField] Transform bladeBase;
     [SerializeField] Transform bladeTip;
-    [Tooltip("Child names to search when the transforms above are not assigned.")]
-    [SerializeField] string bladeBasePointName = "SwordTrailPoint";
-    [SerializeField] string bladeTipPointName = "SlashSpawnPoint";
 
-    [Header("Ribbon look")]
-    [Tooltip("Optional. A transparent/additive material with vertex colour support looks best. Falls back to URP Particles/Unlit.")]
+    [SerializeField]
+    string bladeBasePointName = "SwordTrailPoint";
+
+    [SerializeField]
+    string bladeTipPointName = "SlashSpawnPoint";
+
+    [Header("Look (used when Profile is empty)")]
     [SerializeField] Material ribbonMaterial;
-    [SerializeField, ColorUsage(true, true)] Color ribbonColor = new Color(1f, 0.35f, 0.1f, 0.8f);
-    [SerializeField, Min(0.01f)] float trailDuration = 0.18f;
-    [SerializeField, Min(0.001f)] float sampleDistance = 0.03f;
-    [SerializeField, Min(0.01f)] float bladeWidth = 1.1f;
-    [SerializeField, Min(2)] int maxSamples = 40;
 
-    [Header("Safety")]
-    [Tooltip("Emitting stops automatically after this many seconds, so an interrupted attack never leaves the trail running when no End event fires.")]
-    [SerializeField, Min(0.05f)] float maxEmissionTime = 2f;
+    [SerializeField, ColorUsage(true, true)]
+    Color ribbonColor = new Color(1f, 0.28f, 0.12f, 1f);
+
+    [SerializeField, Min(0.01f)]
+    float trailDuration = 0.22f;
+
+    [SerializeField, Min(0.001f)]
+    float sampleDistance = 0.025f;
+
+    [SerializeField, Min(0.01f)]
+    float bladeWidth = 1.1f;
+
+    [SerializeField, Min(8)]
+    int maxSamples = 48;
+
+    [SerializeField, Min(0.05f)]
+    float maxEmissionTime = 1.8f;
+
+    [Header("Optional shared profile")]
+    [SerializeField] SlashTrailProfile profile;
 
     SwordSlashRibbon ribbon;
-    float emitTimeRemaining;
+    Transform resolvedBase;
+    Transform resolvedTip;
 
     void Awake()
     {
-        if (bladeBase == null) bladeBase = FindChildByName(bladeBasePointName);
-        if (bladeTip == null) bladeTip = FindChildByName(bladeTipPointName);
+        if (bladeBase == null)
+            bladeBase = FindChildByName(bladeBasePointName);
 
-        if (bladeBase == null || bladeTip == null)
+        if (bladeTip == null)
+            bladeTip = FindChildByName(bladeTipPointName);
+
+        resolvedBase = bladeBase;
+        resolvedTip = bladeTip;
+
+        if (resolvedBase == null || resolvedTip == null)
         {
             Debug.LogWarning(
-                $"{name}: WeaponSlashTrail found no blade base/tip transforms. " +
-                "Assign them in the Inspector or add children named " +
-                $"'{bladeBasePointName}' / '{bladeTipPointName}'.",
-                this
-            );
+                $"{name}: WeaponSlashTrail needs blade base/tip transforms. " +
+                $"Assign them or add children named '{bladeBasePointName}' " +
+                $"and '{bladeTipPointName}'.",
+                this);
+
             return;
         }
 
-        ribbon = gameObject.AddComponent<SwordSlashRibbon>();
-        ribbon.Configure(
-            bladeBase,
-            bladeTip,
-            ribbonMaterial,
-            ribbonColor,
-            trailDuration,
-            sampleDistance,
-            bladeWidth,
-            maxSamples
-        );
+        ribbon = GetComponent<SwordSlashRibbon>();
+
+        if (ribbon == null)
+            ribbon = gameObject.AddComponent<SwordSlashRibbon>();
+
+        if (profile != null)
+        {
+            ribbon.ConfigureProfile(
+                resolvedBase,
+                resolvedTip,
+                profile,
+                ribbonMaterial);
+        }
+        else
+        {
+            ribbon.Configure(
+                resolvedBase,
+                resolvedTip,
+                ribbonMaterial,
+                ribbonColor,
+                trailDuration,
+                sampleDistance,
+                bladeWidth,
+                maxSamples);
+        }
     }
 
-    /// <summary>Start emitting the ribbon. Call from an animation event at the swing's first frame.</summary>
+    /// <summary>Call from an Animation Event at the start of the visible cut.</summary>
     public void Begin()
     {
-        if (ribbon == null) return;
-        emitTimeRemaining = maxEmissionTime;
-        ribbon.Begin();
+        if (ribbon == null)
+            return;
+
+        if (profile != null)
+        {
+            ribbon.BeginSlash(
+                resolvedBase,
+                resolvedTip,
+                profile);
+        }
+        else
+        {
+            ribbon.BeginSlash(
+                resolvedBase,
+                resolvedTip,
+                BuildLegacyProfile());
+        }
     }
 
-    /// <summary>Stop emitting; the ribbon fades out on its own. Call from an animation event when the cut has finished.</summary>
+    /// <summary>Call from an Animation Event at the end of the visible cut.</summary>
     public void End()
     {
-        emitTimeRemaining = 0f;
-        ribbon?.End();
+        ribbon?.EndSlash();
     }
 
-    void Update()
-    {
-        if (emitTimeRemaining <= 0f) return;
+    // Animation Event-compatible alternatives.
+    public void SlashStart() => Begin();
+    public void SlashEnd() => End();
 
-        emitTimeRemaining -= Time.deltaTime;
-        if (emitTimeRemaining <= 0f)
-            ribbon.End();
+    public void BeginSlash() => Begin();
+    public void EndSlash() => End();
+
+    /// <summary>Optional combat hook for parry or impact feedback.</summary>
+    public void NotifyParryOrImpact()
+    {
+        ribbon?.NotifyBladeImpact();
+    }
+
+    /// <summary>Immediately removes all trails, including fading ones.</summary>
+    public void CancelTrail()
+    {
+        ribbon?.CancelAndClear();
+    }
+
+    SlashTrailProfile BuildLegacyProfile()
+    {
+        return new SlashTrailProfile
+        {
+            color = ribbonColor,
+            width = 1f,
+            lifetime = Mathf.Max(0.01f, trailDuration),
+            sampleDistance = Mathf.Max(0.001f, sampleDistance),
+            maxSamples = Mathf.Clamp(maxSamples, 8, 96),
+            bladeWidthMultiplier = Mathf.Max(0.01f, bladeWidth),
+            midSwingBulge = 0.28f,
+            endTaper = 0.18f,
+            maxEmissionTime = Mathf.Max(0.05f, maxEmissionTime),
+            useUnscaledTime = false
+        };
     }
 
     Transform FindChildByName(string childName)
     {
-        foreach (Transform child in GetComponentsInChildren<Transform>(true))
-            if (child.name == childName)
-                return child;
+        Transform[] all =
+            GetComponentsInChildren<Transform>(true);
+
+        for (int i = 0; i < all.Length; i++)
+        {
+            if (all[i].name == childName)
+                return all[i];
+        }
 
         return null;
+    }
+
+    void OnDisable()
+    {
+        ribbon?.CancelAndClear();
     }
 }

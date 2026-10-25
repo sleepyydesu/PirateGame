@@ -119,6 +119,34 @@ ModelImporter:
         floatParameter: 0
         intParameter: 0
         messageOptions: 0
+      - time: 0.6318489
+        functionName: AE_SFX
+        data: Swing
+        objectReferenceParameter: {fileID: 11500000, guid: 98206f26a79f21545af950fa419ad033, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.43213198
+        functionName: AE_SFX
+        data: Effort
+        objectReferenceParameter: {fileID: 11500000, guid: 98206f26a79f21545af950fa419ad033, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.61520237
+        functionName: StartSlashVFX
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: c30fa7f2105e37044b70fc9297dd6135, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.75932974
+        functionName: StopSlashVFX
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: c30fa7f2105e37044b70fc9297dd6135, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
       transformMask: []
       maskType: 3
       maskSource: {instanceID: 0}

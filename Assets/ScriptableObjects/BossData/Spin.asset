@@ -21,8 +21,8 @@ MonoBehaviour:
   phase1Weight: 0
   phase2Weight: 0.9
   cooldown: 3
-  damage: 20
-  fatigueCost: 25
+  damage: 45
+  fatigueCost: 10
   guaranteedRecovery: 0.2
   trackingDegreesPerSecond: 240
   hitReaction: 2
@@ -43,9 +43,9 @@ MonoBehaviour:
   jumpHeight: 1.8
   jumpMaxDistance: 5
   jumpLandNormalized: 0.65
-  attackStepDistance: 0.7
+  attackStepDistance: 2
   attackStepSpeed: 2.5
-  attackStopDistance: 1.3
+  attackStopDistance: 0.5
   isProjectileAttack: 0
   projectilePrefab: {fileID: 0}
   projectileSpeedRange: {x: 12, y: 18}
@@ -54,6 +54,7 @@ MonoBehaviour:
   parryable: 0
   punishHealing: 0
   followup: {fileID: 0}
+  spell: {fileID: 0}
   phase1ChainChance: 0
   phase2ChainChance: 0
   meleePushDistance: 0.2

@@ -12,6 +12,7 @@ namespace PirateGame.PlayerV2
         public PlayerCombat Combat { get; private set; }
         public UnityEvent<float> onLanded = new UnityEvent<float>();
         private PlayerAnimationDriver animationDriver;
+        private PlayerDirectionalMovement directionalMovement;
         public PlayerStateMachine Locomotion { get; private set; }
         public PlayerGroundedState Grounded { get; private set; }
         public PlayerAirborneState Airborne { get; private set; }
@@ -20,6 +21,7 @@ namespace PirateGame.PlayerV2
         {
             started = true; Motor = GetComponent<PlayerMotor>(); Input = GetComponent<PlayerInputReader>();
             Combat = GetComponent<PlayerCombat>(); animationDriver = GetComponent<PlayerAnimationDriver>();
+            directionalMovement = GetComponent<PlayerDirectionalMovement>();
             var weapon = GetComponent<PlayerWeaponBridge>(); weapon.Initialize();
             ready = Motor.Validate() && weapon.Ready && animationDriver.Validate() && Combat.Initialize();
             if (ready)
@@ -39,8 +41,16 @@ namespace PirateGame.PlayerV2
             if (Combat.Kind == PlayerActionKind.Dead) return;
             Locomotion.Tick(dt);
             // Dodge velocity integrates only its remaining travel budget, even on a slow frame.
-            Motor.Step(dt, Input.Move, Combat.IsFree && Input.Sprint, Combat.MovementScale,
-                Combat.RotateWithMovement, Combat.ScriptedMotion, Combat.ConsumeActionVelocity(dt), Combat.RootTranslation);
+            if (directionalMovement != null && directionalMovement.isActiveAndEnabled)
+            {
+                directionalMovement.Step(dt);
+            }
+            else
+            {
+                Motor.Step(dt, Input.Move, Combat.IsFree && Input.Sprint, Combat.MovementScale,
+                    Combat.RotateWithMovement, Combat.ScriptedMotion,
+                    Combat.ConsumeActionVelocity(dt), Combat.RootTranslation);
+            }
             if (Motor.Grounded) sprintJump = false;
             float speed = Motor.HorizontalVelocity.magnitude / Mathf.Max(0.1f, Motor.runSpeed);
             animationDriver.Visuals(Combat.Weapon.Drawn, !Motor.Grounded, Motor.Crouched, sprintJump,

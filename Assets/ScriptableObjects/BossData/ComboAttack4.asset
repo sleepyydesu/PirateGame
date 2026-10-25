@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13b4916396bdc964c94d5a264a2f6498, type: 3}
+  m_Name: ComboAttack4
+  m_EditorClassIdentifier: Assembly-CSharp::PirateGame.Enemies.CaptainAttack
+  trigger: comboAttack4
+  fullStateName: Base Layer.Boss_ComboAttack4
+  watchdogSeconds: 4
+  minRange: 1
+  maxRange: 2.5
+  maxFacingAngle: 180
+  phase1Weight: 3
+  phase2Weight: 2
+  cooldown: 3
+  damage: 50
+  fatigueCost: 10
+  guaranteedRecovery: 0.7
+  trackingDegreesPerSecond: 240
+  hitReaction: 2
+  hitReactionMode: 0
+  useRootMotion: 0
+  jumpSlam: 0
+  useGroundBurst: 0
+  comboBurstDamage: 15
+  comboBurstReaction: 4
+  comboBurstReactionMode: 0
+  groundBurstVfx: {fileID: 0}
+  groundBurstRadius: 3
+  groundBurstHeight: 1.2
+  knockbackDistance: 1
+  knockbackSeconds: 0.25
+  groundBurstVfxLifetime: 3
+  jumpFacingOffsetDegrees: 0
+  jumpHeight: 1.8
+  jumpMaxDistance: 5
+  jumpLandNormalized: 0.65
+  attackStepDistance: 2
+  attackStepSpeed: 2.5
+  attackStopDistance: 0.5
+  isProjectileAttack: 0
+  projectilePrefab: {fileID: 0}
+  projectileSpeedRange: {x: 12, y: 18}
+  projectileRollOffsetDegrees: 0
+  projectileAimHeight: 1
+  parryable: 1
+  punishHealing: 0
+  followup: {fileID: 0}
+  spell: {fileID: 0}
+  phase1ChainChance: 0.15
+  phase2ChainChance: 0.45
+  meleePushDistance: 0.5
+  meleePushSeconds: 0.12
+  blockedMeleePushDistance: 0.2
+  blockedMeleePushSeconds: 0.12
+  meleeHitOverrides: []

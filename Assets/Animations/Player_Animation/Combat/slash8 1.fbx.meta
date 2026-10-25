@@ -71,7 +71,7 @@ ModelImporter:
         intParameter: 0
         messageOptions: 0
       - time: 0.7142857
-        functionName: AE_HItboxOff
+        functionName: AE_HitboxOff
         data: 
         objectReferenceParameter: {fileID: 11500000, guid: 5c7a6eac6b575da45addce4036d60b32, type: 3}
         floatParameter: 0
@@ -116,6 +116,34 @@ ModelImporter:
         functionName: AE_ActionComplete
         data: 
         objectReferenceParameter: {fileID: 11500000, guid: 5c7a6eac6b575da45addce4036d60b32, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.52902603
+        functionName: AE_SFX
+        data: Swing
+        objectReferenceParameter: {fileID: 11500000, guid: 98206f26a79f21545af950fa419ad033, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.2582576
+        functionName: AE_SFX
+        data: Effort
+        objectReferenceParameter: {fileID: 11500000, guid: 98206f26a79f21545af950fa419ad033, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.43483135
+        functionName: StartSlashVFX
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: c30fa7f2105e37044b70fc9297dd6135, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.69551
+        functionName: StopSlashVFX
+        data: 
+        objectReferenceParameter: {fileID: 11500000, guid: c30fa7f2105e37044b70fc9297dd6135, type: 3}
         floatParameter: 0
         intParameter: 0
         messageOptions: 0

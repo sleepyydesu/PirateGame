@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.AI;
 using PirateGame.Combat;
+using PirateGame.Progression;
 
 namespace PirateGame.Enemies
 {
@@ -141,6 +142,7 @@ namespace PirateGame.Enemies
         private float circleDirTimer;
         private float repathTimer;
         private float tokenHoldTimer;
+        private EnemyLoot loot;
 
         // Animator parameter caching so missing parameters never spam warnings.
         private static readonly int SpeedParam = Animator.StringToHash("Speed");
@@ -155,6 +157,7 @@ namespace PirateGame.Enemies
 
         private void Awake()
         {
+            loot = GetComponent<EnemyLoot>();
             agent = GetComponent<NavMeshAgent>();
             health = GetComponent<Health>();
             if (animator == null) animator = GetComponentInChildren<Animator>();
@@ -758,6 +761,7 @@ namespace PirateGame.Enemies
 
         private void HandleDeath()
         {
+            loot?.DropLoot();
             EnterState(State.Dead);
 
             if (ragdollPrefab != null)

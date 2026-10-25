@@ -50,7 +50,7 @@ ModelImporter:
       loopBlendPositionXZ: 0
       keepOriginalOrientation: 1
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -102,6 +102,48 @@ ModelImporter:
         functionName: AE_ActionComplete
         data: 
         objectReferenceParameter: {fileID: 11500000, guid: 32acca6aa1fe4f543b1387c32a7b5af1, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.1914949
+        functionName: AE_SFX
+        data: Effort
+        objectReferenceParameter: {fileID: 11500000, guid: 98206f26a79f21545af950fa419ad033, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.21424173
+        functionName: AE_SFX
+        data: Swing
+        objectReferenceParameter: {fileID: 11500000, guid: 98206f26a79f21545af950fa419ad033, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.3442355
+        functionName: AE_SFX
+        data: Effort
+        objectReferenceParameter: {fileID: 11500000, guid: 98206f26a79f21545af950fa419ad033, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.37795824
+        functionName: AE_SFX
+        data: Swing
+        objectReferenceParameter: {fileID: 11500000, guid: 98206f26a79f21545af950fa419ad033, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.5571448
+        functionName: AE_SFX
+        data: Effort
+        objectReferenceParameter: {fileID: 11500000, guid: 98206f26a79f21545af950fa419ad033, type: 3}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0.6045353
+        functionName: AE_SFX
+        data: Swing
+        objectReferenceParameter: {fileID: 11500000, guid: 98206f26a79f21545af950fa419ad033, type: 3}
         floatParameter: 0
         intParameter: 0
         messageOptions: 0

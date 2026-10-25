@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace SunTemple
 {
@@ -74,7 +75,7 @@ namespace SunTemple
 					Rotate ();
 				}
 
-				if (Input.GetKeyDown (KeyCode.Mouse0)) {
+				if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) {
 					TryToOpen ();
 				}
 

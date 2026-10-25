@@ -12,6 +12,9 @@ namespace PirateGame.PlayerV2
         public float turnRate = 720f, gravity = -24f, jumpHeight = 1.1f;
         public float coyoteSeconds = 0.10f, probeDistance = 0.12f, groundStickSpeed = 2f;
         public float crouchHeight = 1.35f;
+        [Header("Sound / presentation hooks")]
+        public UnityEngine.Events.UnityEvent onJump = new UnityEngine.Events.UnityEvent();
+        public UnityEngine.Events.UnityEvent<float> onLand = new UnityEngine.Events.UnityEvent<float>();
         public bool Grounded { get; private set; }
         public bool Crouched { get; private set; }
         public float VerticalSpeed { get; private set; }
@@ -66,7 +69,12 @@ namespace PirateGame.PlayerV2
             if (Grounded)
             {
                 lastGroundTime = Time.time;
-                if (!wasGrounded) { JustLanded = true; LastImpactSpeed = Mathf.Max(0f, -VerticalSpeed); }
+                if (!wasGrounded)
+                {
+                    JustLanded = true;
+                    LastImpactSpeed = Mathf.Max(0f, -VerticalSpeed);
+                    onLand.Invoke(LastImpactSpeed);
+                }
             }
             wasGrounded = Grounded;
         }
@@ -75,6 +83,7 @@ namespace PirateGame.PlayerV2
             if (!CanJump || !TryCrouch(false)) return false;
             VerticalSpeed = Mathf.Sqrt(-2f * gravity * jumpHeight);
             Grounded = wasGrounded = false; lastGroundTime = float.NegativeInfinity;
+            onJump.Invoke();
             return true;
         }
         public bool TryCrouch(bool crouch)
@@ -148,11 +157,13 @@ namespace PirateGame.PlayerV2
         }
         // One persistent velocity. Action states choose policy, never reset gravity.
         public void Step(float dt, Vector2 input, bool sprint, float movementScale, bool rotate,
-            bool scriptedMotion, Vector3 actionVelocity, bool rootTranslation)
+            bool scriptedMotion, Vector3 actionVelocity, bool rootTranslation,
+            float moveSpeedOverride = -1f)
         {
             if (!capsule.enabled || dt <= 0f) return;
             WishDirection = CameraDirection(input);
-            float speed = Crouched ? crouchSpeed : sprint ? sprintSpeed : runSpeed;
+            float speed = Crouched ? crouchSpeed : sprint ? sprintSpeed :
+                moveSpeedOverride >= 0f ? moveSpeedOverride : runSpeed;
             Vector3 desired = WishDirection * speed * movementScale;
             bool pushed = HasKnockback;
 

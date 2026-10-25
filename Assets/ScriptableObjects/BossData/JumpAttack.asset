@@ -15,14 +15,14 @@ MonoBehaviour:
   trigger: jumpAttack
   fullStateName: Base Layer.Boss_JumpAttack
   watchdogSeconds: 3.5
-  minRange: 0
-  maxRange: 2.5
+  minRange: 3
+  maxRange: 6
   maxFacingAngle: 180
   phase1Weight: 1
   phase2Weight: 1
   cooldown: 3
-  damage: 20
-  fatigueCost: 25
+  damage: 60
+  fatigueCost: 10
   guaranteedRecovery: 0.7
   trackingDegreesPerSecond: 240
   hitReaction: 4
@@ -30,15 +30,18 @@ MonoBehaviour:
   useRootMotion: 0
   jumpSlam: 1
   useGroundBurst: 1
+  comboBurstDamage: 15
+  comboBurstReaction: 4
+  comboBurstReactionMode: 0
   groundBurstVfx: {fileID: 2321939456251348004, guid: 8b81df6afad302d429e8ed0dc689aa8b, type: 3}
-  groundBurstRadius: 3
+  groundBurstRadius: 4
   groundBurstHeight: 1.2
   knockbackDistance: 1
   knockbackSeconds: 0.25
   groundBurstVfxLifetime: 3
   jumpFacingOffsetDegrees: -10
-  jumpHeight: 1.5
-  jumpMaxDistance: 5
+  jumpHeight: 5
+  jumpMaxDistance: 10
   jumpLandNormalized: 0.5
   attackStepDistance: 0
   attackStepSpeed: 2.5
@@ -51,5 +54,11 @@ MonoBehaviour:
   parryable: 0
   punishHealing: 0
   followup: {fileID: 0}
+  spell: {fileID: 0}
   phase1ChainChance: 0.9
   phase2ChainChance: 0.9
+  meleePushDistance: 0
+  meleePushSeconds: 0.12
+  blockedMeleePushDistance: 0
+  blockedMeleePushSeconds: 0.12
+  meleeHitOverrides: []

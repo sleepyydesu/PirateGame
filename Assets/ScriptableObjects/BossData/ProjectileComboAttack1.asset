@@ -21,7 +21,7 @@ MonoBehaviour:
   phase1Weight: 1
   phase2Weight: 1
   cooldown: 3
-  damage: 20
+  damage: 65
   fatigueCost: 10
   guaranteedRecovery: 0.3
   trackingDegreesPerSecond: 360
@@ -49,11 +49,14 @@ MonoBehaviour:
   isProjectileAttack: 1
   projectilePrefab: {fileID: -1422669372087685840, guid: 8c3f5caca8da7bd4b8aed395fdfea002, type: 3}
   projectileSpeedRange: {x: 12, y: 18}
+  projectileFlightSound: {fileID: 8300000, guid: 0665b6af7e92db14c91be7bc6f20d801, type: 3}
+  projectileFlightSoundVolume: 1
   projectileRollOffsetDegrees: 0
   projectileAimHeight: 1
   parryable: 0
   punishHealing: 0
   followup: {fileID: 11400000, guid: d9f86a9fefbe8d14ca45227997432326, type: 2}
+  spell: {fileID: 0}
   phase1ChainChance: 1
   phase2ChainChance: 1
   meleePushDistance: 0.2

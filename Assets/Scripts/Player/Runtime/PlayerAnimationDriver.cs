@@ -16,6 +16,7 @@ namespace PirateGame.PlayerV2
         private float hurtPulseUntil;
         public bool Faulted => exited;
         public bool ActionEntered => entered && !exited && expectedHash != 0;
+        public string LastRejectedEvent { get; private set; }
         public bool ActionFinished
         {
             get
@@ -66,6 +67,7 @@ namespace PirateGame.PlayerV2
                 hurtPulseUntil = 0f;
             }
             expectedLayer = layer; expectedHash = Animator.StringToHash(path); entered = exited = false;
+            LastRejectedEvent = null;
             lastRequested[layer] = expectedHash;
             animator.CrossFadeInFixedTime(expectedHash, 0.06f, layer, 0f);
         }
@@ -81,8 +83,36 @@ namespace PirateGame.PlayerV2
         }
         public void StateEntered(int layer, int hash) { if (layer == expectedLayer && hash == expectedHash) entered = true; }
         public void StateExited(int layer, int hash) { if (layer == expectedLayer && hash == expectedHash && entered) exited = true; }
-        public bool Accept(AnimationEvent e) => isActiveAndEnabled && e.isFiredByAnimator && entered && !exited &&
-            expectedHash != 0 && e.animatorStateInfo.fullPathHash == expectedHash;
+        public bool Accept(AnimationEvent e)
+        {
+            bool accepted = isActiveAndEnabled && e.isFiredByAnimator && entered && !exited &&
+                expectedHash != 0 && e.animatorStateInfo.fullPathHash == expectedHash;
+            if (!accepted)
+            {
+                LastRejectedEvent = e.functionName +
+                    " (eventState=" + e.animatorStateInfo.fullPathHash +
+                    ", expectedState=" + expectedHash +
+                    ", entered=" + entered + ", exited=" + exited + ")";
+            }
+            return accepted;
+        }
+        public string DescribeActionState()
+        {
+            if (animator == null || expectedLayer < 0 || expectedLayer >= animator.layerCount)
+                return "No expected Animator state.";
+
+            AnimatorStateInfo current = animator.GetCurrentAnimatorStateInfo(expectedLayer);
+            string next = animator.IsInTransition(expectedLayer)
+                ? animator.GetNextAnimatorStateInfo(expectedLayer).fullPathHash.ToString()
+                : "none";
+            return "Layer " + expectedLayer + " ('" + animator.GetLayerName(expectedLayer) +
+                "'), weight=" + animator.GetLayerWeight(expectedLayer).ToString("F2") +
+                ", expected=" + expectedHash + ", current=" + current.fullPathHash +
+                ", next=" + next + ", normalizedTime=" + current.normalizedTime.ToString("F2") +
+                ", entered=" + entered + ", exited=" + exited +
+                ", animatorSpeed=" + animator.speed.ToString("F2") +
+                ", lastRejectedEvent=" + (LastRejectedEvent ?? "none");
+        }
         public void Visuals(
     bool drawn,
     bool airborne,

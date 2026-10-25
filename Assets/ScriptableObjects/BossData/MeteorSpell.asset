@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 397897bae1f99674e827afc88697b1ca, type: 3}
+  m_Name: MeteorSpell
+  m_EditorClassIdentifier: Assembly-CSharp::PirateGame.Enemies.MeteorSpell
+  meteorPrefab: {fileID: 8378648546881499446, guid: fe3c023a4ed83db4d89bd77145b73aa5, type: 3}
+  impactEffectPrefab: {fileID: 0}
+  groundMarkerPrefab: {fileID: 0}
+  prefabPlaysItself: 1
+  impactDelay: 1
+  prefabLifetime: 3
+  formingSound: {fileID: 8300000, guid: 268f926fd310bcc489c80fddd2f00d66, type: 3}
+  formingSoundVolume: 1
+  impactSound: {fileID: 8300000, guid: 8133a075593e12246b5f84e71e612bb7, type: 3}
+  impactSoundVolume: 1
+  meteorCount: 10
+  castDuration: 3
+  waveInterval: 1
+  fallSpeed: 30
+  spawnHeight: 10
+  formTime: 0.5
+  directHitChance: 0.7
+  scatterMinRadius: 5
+  scatterMaxRadius: 11
+  minSpacing: 7
+  damage: 100
+  blastRadius: 3
+  victims:
+    serializedVersion: 2
+    m_Bits: 4096
+  ground:
+    serializedVersion: 2
+    m_Bits: 2048
+  holdPose: 1
+  holdPoseSpeed: 0
+  laterPhaseCountMultiplier: 1.5
+  laterPhaseSpeedMultiplier: 1.15

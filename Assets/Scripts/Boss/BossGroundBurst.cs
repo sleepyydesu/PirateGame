@@ -40,6 +40,10 @@ namespace PirateGame.Enemies
         private CaptainAttack move;
         private Vector3 fallbackPoint;
         private bool queued;
+
+        [Header("Presentation; invoked once after finding the impact ground")]
+        public UnityEngine.Events.UnityEvent<Vector3> onImpact =
+            new UnityEngine.Events.UnityEvent<Vector3>();
         private bool comboImpact;
         private Transform queuedImpactPoint;
 
@@ -107,6 +111,7 @@ namespace PirateGame.Enemies
             }
 
             Vector3 center = floor.point;
+            onImpact.Invoke(center);
 
             if (move.groundBurstVfx != null)
             {

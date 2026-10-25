@@ -81,6 +81,10 @@ namespace PirateGame.Enemies
 
         [Tooltip("Minimum and maximum speed in metres per second.")]
         public Vector2 projectileSpeedRange = new Vector2(12f, 18f);
+        [Tooltip("Optional 3D sound that follows this projectile during flight.")]
+        public AudioClip projectileFlightSound;
+        [Range(0f, 1f)]
+        public float projectileFlightSoundVolume = 1f;
         [Tooltip("Extra rotation around the projectile's travel direction.")]
         [Range(-180f, 180f)]
         public float projectileRollOffsetDegrees = 0f;
@@ -92,6 +96,8 @@ namespace PirateGame.Enemies
         public bool punishHealing;
         [Header("Optional extension (separate clip/state)")]
         public CaptainAttack followup;
+        [Header("Optional: meteor spell (leave empty for normal attacks)")]
+        public MeteorSpell spell;
         [Range(0f, 1f)] public float phase1ChainChance = 0.15f;
         [Range(0f, 1f)] public float phase2ChainChance = 0.45f;
         [System.Serializable]

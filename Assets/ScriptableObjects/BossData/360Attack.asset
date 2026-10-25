@@ -20,9 +20,9 @@ MonoBehaviour:
   maxFacingAngle: 180
   phase1Weight: 1
   phase2Weight: 1
-  cooldown: 3
-  damage: 20
-  fatigueCost: 25
+  cooldown: 2
+  damage: 45
+  fatigueCost: 5
   guaranteedRecovery: 0.7
   trackingDegreesPerSecond: 360
   hitReaction: 2
@@ -43,9 +43,9 @@ MonoBehaviour:
   jumpHeight: 1.8
   jumpMaxDistance: 5
   jumpLandNormalized: 0.65
-  attackStepDistance: 0.7
+  attackStepDistance: 1
   attackStepSpeed: 2.5
-  attackStopDistance: 1.3
+  attackStopDistance: 0.7
   isProjectileAttack: 0
   projectilePrefab: {fileID: 0}
   projectileSpeedRange: {x: 12, y: 18}
@@ -54,7 +54,8 @@ MonoBehaviour:
   parryable: 0
   punishHealing: 0
   followup: {fileID: 11400000, guid: d589dd6d08939964eb744aecf8e0709f, type: 2}
-  phase1ChainChance: 0.5
+  spell: {fileID: 0}
+  phase1ChainChance: 0.9
   phase2ChainChance: 1
   meleePushDistance: 0.2
   meleePushSeconds: 0.12

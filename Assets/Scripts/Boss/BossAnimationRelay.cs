@@ -81,6 +81,7 @@ namespace PirateGame.Enemies
         public void AE_ParryOff(AnimationEvent e) { if (Accept(e)) boss.SetParryWindow(false); }
         public void AE_ChainDecision(AnimationEvent e) { if (Accept(e)) boss.DecideChain(); }
         public void AE_ActionComplete(AnimationEvent e) { if (Accept(e)) boss.CompleteAction(); }
+        public void AE_SpellStart(AnimationEvent e) { if (Accept(e)) boss.BeginSpell(); }
         public void AE_GuardOn(AnimationEvent e)
         {
             if (Accept(e)) boss.SetDuelGuard(true);

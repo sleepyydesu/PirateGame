@@ -64,6 +64,7 @@ namespace PirateGame.Enemies
         [SerializeField] private Transform player;
         [SerializeField] private Animator animator;
         [SerializeField] private BossWeaponSweep weapon;
+        [SerializeField] private BossMeteorCaster caster;
         [SerializeField] private BossGroundBurst groundBurst;
         [Header("Phase-change roar burst")]
         [SerializeField] private CaptainAttack roarBurstSettings;
@@ -108,6 +109,7 @@ namespace PirateGame.Enemies
         [SerializeField, Min(0.1f)] private float walkSpeed = 2.2f;
         [SerializeField, Min(0.1f)] private float chaseSpeed = 4.5f;
         [SerializeField, Min(0.1f)] private float preferredDistance = 2.2f;
+        [SerializeField, Min(0.1f)] private float prepareAttackDistance = 1f;
         [Header("Return home")]
         [SerializeField, Min(0.1f)] private float returnHomeSpeed = 3.5f;
         [SerializeField, Min(0.2f)] private float homeArrivalDistance = 0.6f;
@@ -161,6 +163,7 @@ namespace PirateGame.Enemies
         public UnityEvent onPhaseTransitionFinished = new UnityEvent();
         public UnityEvent onTaunt = new UnityEvent();
         public UnityEvent onCommittedAttack = new UnityEvent();
+        public UnityEvent onProjectileReleased = new UnityEvent();
         public UnityEvent onDeath = new UnityEvent();
 
         public State CurrentState { get; private set; }
@@ -202,6 +205,7 @@ namespace PirateGame.Enemies
         {
             agent = GetComponent<NavMeshAgent>(); health = GetComponent<Health>();
             if (animator == null) animator = GetComponentInChildren<Animator>();
+            if (caster == null) caster = GetComponent<BossMeteorCaster>();
             home = transform.position; poise = maxPoise;
             agent.updateRotation = false; // One owner of rotation; never NavMesh + code simultaneously.
             CacheAnimatorParameters();
@@ -670,7 +674,7 @@ namespace PirateGame.Enemies
 
             Move(lastSeen, chaseSpeed * CurrentPhase.speedMultiplier);
 
-            if (Distance <= preferredDistance + 0.6f && Visible())
+            if (Distance <= preferredDistance + prepareAttackDistance && Visible())
             {
                 // Keep the boss's required fatigue break.
                 if (fatigueOwed || fatigue >= fatigueThreshold)
@@ -815,8 +819,10 @@ namespace PirateGame.Enemies
 
             if (animationReady && animator.speed > 0f)
             {
-                // Turn during preparation, then hold direction for the swing.
-                if (!committed && TargetAlive && Visible())
+                bool casting = caster != null && caster.IsCasting;
+
+                // Turn during preparation and while casting, then hold direction for the swing.
+                if ((!committed || casting) && TargetAlive && Visible())
                 {
                     Face(lastSeen, currentAttack.trackingDegreesPerSecond);
                 }
@@ -1196,6 +1202,9 @@ namespace PirateGame.Enemies
 
         private bool TickAction()
         {
+            bool spellCasting = CurrentState == State.Attack &&
+                caster != null && caster.IsCasting;
+
             // Advance by Animator speed so local animator hit-stop does not consume the budget.
             float playback = CurrentState == State.Attack
                 ? AttackPlayback
@@ -1206,12 +1215,12 @@ namespace PirateGame.Enemies
                 Mathf.Max(0f, animator.speed) *
                 playback;
 
-            if (stateExited)
+            if (stateExited && !spellCasting)
             {
                 // Authored completion: animation finished normally via AnimationStateExited
                 CompleteAction(true);
             }
-            else if (actionAge >= actionTimeout)
+            else if (!spellCasting && actionAge >= actionTimeout)
             {
                 // Fault recovery: animation got stuck, state name mismatch, or relay failed
                 Debug.LogWarning($"Boss action contract failed in {CurrentState}. Closed weapon and returned safely.", this);
@@ -1429,7 +1438,10 @@ namespace PirateGame.Enemies
                 speed,
                 currentAttack.damage,
                 currentAttack.hitReaction,
-                currentAttack.hitReactionMode);
+                currentAttack.hitReactionMode,
+                currentAttack.projectileFlightSound,
+                currentAttack.projectileFlightSoundVolume);
+            onProjectileReleased.Invoke();
         }
         public void PrepareGroundBurst()
         {
@@ -1546,6 +1558,13 @@ namespace PirateGame.Enemies
                 hit != null ? hit.blockedPushSeconds : currentAttack.blockedMeleePushSeconds);
         }
         public void CloseHitbox() { if (weapon != null) weapon.Close(); }
+        public void BeginSpell()
+        {
+            if (CurrentState != State.Attack || currentAttack == null ||
+                currentAttack.spell == null || caster == null) return;
+            CommitAttack();
+            caster.StartCast(currentAttack.spell, player, gameObject, phaseIndex);
+        }
         public void SetParryWindow(bool open)
         {
             parryWindow = open && CurrentState == State.Attack && currentAttack != null && currentAttack.parryable;
@@ -1643,6 +1662,7 @@ namespace PirateGame.Enemies
             returningHome = false;
 
             CancelAction();
+            if (caster != null) caster.Stop(true);
             machine.Change(dead);
         }
         // Call ONLY when the player's visible healing animation starts, not on button press.
@@ -1726,6 +1746,7 @@ namespace PirateGame.Enemies
             CloseHitbox(); parryWindow = false; expectedHash = enteredHash = 0;
             stateExited = false; queuedChain = null;
             if (OnMesh) { agent.nextPosition = transform.position; agent.updatePosition = true; }
+            if (caster != null) caster.Stop(false);
         }
         private void ForceLocomotion()
         {

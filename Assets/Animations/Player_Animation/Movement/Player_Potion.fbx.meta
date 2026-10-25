@@ -70,13 +70,6 @@ ModelImporter:
         floatParameter: 0
         intParameter: 0
         messageOptions: 0
-      - time: 0.8765255
-        functionName: AE_PotionPutAway
-        data: 
-        objectReferenceParameter: {fileID: 11500000, guid: 5c7a6eac6b575da45addce4036d60b32, type: 3}
-        floatParameter: 0
-        intParameter: 0
-        messageOptions: 0
       - time: 0.970567
         functionName: AE_ActionComplete
         data: 
